@@ -5,57 +5,52 @@ import h1st_saas.util as util
 
 
 class WorkbenchController:
-    def list_workbench(self):
-        pass
+    def list_workbench(self, user):
+        dyn = boto3.client('dynamodb')
+        resp = dyn.query(
+            TableName=config.DYNDB_TABLE,
+            KeyConditions={
+                'user_id': {
+                    'AttributeValueList': [{'S': user}],
+                    'ComparisonOperator': 'EQ'
+                }
+            }
+        )
 
-    def launch(self):
-        wid = util.random_char()
+        result = []
+        for i in resp['Items']:
+            v = {}
+
+            # flatten the dict
+            for k in i:
+                x = list(i[k].keys())[0]
+                v[k] = i[k][x]
+
+            result.append(v)
+
+        return result
+
+    def launch(self, user):
+        wid = util.random_char()  # TODO: conflict
         dyn = boto3.client('dynamodb')
         ecs = boto3.client('ecs')
 
-        owner = 'bao'
+        user = str(user)
         task_arn = None
 
         try:
-            result = ecs.run_task(
-                cluster=config.ECS_CLUSTER,
-                taskDefinition=config.ECS_TASK_DEFINITION,
-                overrides={
-                    'containerOverrides': [
-                        {
-                            'name': 'workbench',
-                            'environment': [
-                                {'name': 'WB_USER', 'value': owner},
-                                {'name': 'WB_ID', 'value': wid}
-                            ],
-                            'cpu': 1024,
-                            'memory': 2048,
-                        }
-                    ]
-                },
-                tags=[
-                    {'key': 'Project', 'value': 'H1st'},
-                    {'key': 'Workbench ID', 'value': wid},
-                ]
-            )
-
+            result = self._start(user, wid)
             task_arn = result['tasks'][0]['taskArn']
+            version_arn = result['tasks'][0]['taskDefinitionArn']
 
             dyn.put_item(
                 TableName=config.DYNDB_TABLE,
                 Item={
-                    'user_id': {
-                        'S': owner,
-                    },
-                    'workbench_id': {
-                        'S': wid,
-                    },
-                    'task_arn': {
-                        'S': task_arn,
-                    },
-                    'status': {
-                        'S': 'new'
-                    }
+                    'user_id': { 'S': user, },
+                    'workbench_id': { 'S': wid, },
+                    'task_arn': { 'S': task_arn, },
+                    'version_arn': { 'S': version_arn },
+                    'status': { 'S': 'starting' }
                 }
             )
         except:
@@ -68,27 +63,172 @@ class WorkbenchController:
 
         return wid
 
-    def start(self, wid):
+    def get_status(self, user, wid):
+        ecs = boto3.client('ecs')
+        ec2 = boto3.client('ec2')
+
+        item = self._get_item(user, wid)
+
+        update = {}
+        
+        if 'task_arn' in item:
+            tasks = ecs.describe_tasks(cluster=config.ECS_CLUSTER, tasks=[item['task_arn']['S']])['tasks']
+            
+            if tasks:
+                task = tasks[0]
+
+                ecs_status = task['lastStatus'].lower()
+
+                if ecs_status == 'running' and 'endpoint' not in item:
+                    containerPort = task['containers'][0]['networkBindings'][0]['hostPort']
+                    
+                    containerInstances = ecs.describe_container_instances(
+                        cluster=config.ECS_CLUSTER, containerInstances=[task['containerInstanceArn']]
+                    )['containerInstances']
+                    instanceId = containerInstances[0]['ec2InstanceId']
+
+                    instances = (ec2.describe_instances(InstanceIds=[instanceId]))
+                    privateAddr = (instances['Reservations'][0]['Instances'][0]['PrivateIpAddress'])
+
+                    update['private_endpoint'] = f"http://{privateAddr}:{containerPort}"
+
+                update['status'] = ecs_status
+            else:
+                update = {
+                    'status': 'stopped',
+                    'task_arn': None,
+                    'private_endpoint': None,
+                }
+        else:
+            update = {
+                'status': 'stopped'
+            }
+
+        if update:
+            self._update_item(user, wid, update)
+
+        return update['status']
+
+    def start(self, user, wid):
         """
         Start a stopped workbench
         """
-        pass
+        item = self._get_item(user, wid)
+        
+        if 'task_arn' not in item:
+            try:
+                result = self._start(user, wid)
+                task_arn = result['tasks'][0]['taskArn']
+                version_arn = result['tasks'][0]['taskDefinitionArn']
 
-    def stop(self, wid):
+                self._update_item(user, wid, {
+                    'task_arn': task_arn,
+                    'version_arn': version_arn,
+                    'status': 'starting',
+                })
+            except:
+                if task_arn is not None:
+                    ecs.stop_task(
+                        cluster=config.ECS_CLUSTER,
+                        task=task_arn,
+                        reason='Launch failure',
+                    )
+        else:
+            # TODO: make sure the container is running
+            status = self.get_status(user, wid)
+
+    def stop(self, user, wid):
         """
         Stop a workbench
         """
-        # ecs.stop_task(
-        #     cluster=config.ECS_CLUSTER,
-        #     task='arn:aws:ecs:us-west-1:394497726199:task/H1st/1d7dc305fc5d4a2e900bec4d0661f15c',
-        #     reason='Request by user'
-        # )
+        ecs = boto3.client('ecs')
 
-        return
+        item = self._get_item(user, wid)
 
-    def destroy(self, wid):
+        if 'task_arn' in item:
+            ecs.stop_task(
+                cluster=config.ECS_CLUSTER,
+                task=item['task_arn']['S'],
+                reason='Request by user'
+            )
+
+        self._update_item(user, wid, {
+            'task_arn': None,
+            'private_endpoint': None,
+            'status': 'stopped'
+        })
+
+    def destroy(self, user, wid):
         """
         Destroy a workbench, all data will be lost
         """
-        # TODO: stop & delete in dynamodb
-        self.stop(wid)
+        self.stop(user, wid)
+        dyn = boto3.client('dynamodb')
+        dyn.delete_item(
+            TableName=config.DYNDB_TABLE,
+            Key=self._item_key(user, wid)
+        )
+
+    def _start(self, user, wid):
+        ecs = boto3.client('ecs')
+        result = ecs.run_task(
+            cluster=config.ECS_CLUSTER,
+            taskDefinition=config.ECS_TASK_DEFINITION,
+            overrides={
+                'containerOverrides': [
+                    {
+                        'name': 'workbench',
+                        'environment': [
+                            {'name': 'WB_USER', 'value': user},
+                            {'name': 'WB_ID', 'value': wid}
+                        ],
+                        'cpu': 1024,
+                        'memory': 2048,
+                    }
+                ]
+            },
+            tags=[
+                {'key': 'Project', 'value': 'H1st'},
+                {'key': 'Workbench ID', 'value': wid},
+            ]
+        )
+
+        return result
+
+    def _item_key(self, user, wid):
+        return {
+            'user_id': {'S': user},
+            'workbench_id': {'S': wid},
+        }
+
+    def _get_item(self, user, wid):
+        dyn = boto3.client('dynamodb')
+        item = dyn.get_item(
+            TableName=config.DYNDB_TABLE,
+            Key={
+                'user_id': {'S': user},
+                'workbench_id': {'S': wid},
+            }).get('Item')
+
+        if not item:
+            raise RuntimeError("Workbench is not valid")
+
+        return item
+
+    def _update_item(self, user, wid, data):
+        updates = {}
+        for k, v in data.items():
+            if v is None:
+                updates[k] = {'Action': 'DELETE'}
+            else:
+                updates[k] = {
+                    'Action': 'PUT',
+                    'Value': {'S': str(v)},
+                }
+
+        dyn = boto3.client('dynamodb')
+        dyn.update_item(
+            TableName=config.DYNDB_TABLE,
+            Key=self._item_key(user, wid), 
+            AttributeUpdates=updates
+        )
