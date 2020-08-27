@@ -50,7 +50,8 @@ class WorkbenchController:
                     'workbench_id': { 'S': wid, },
                     'task_arn': { 'S': task_arn, },
                     'version_arn': { 'S': version_arn },
-                    'status': { 'S': 'starting' }
+                    'status': { 'S': 'starting' },
+                    'public_endpoint': { 'S': f'{config.BASE_URL}/{wid}/' },
                 }
             )
         except:
