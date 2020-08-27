@@ -1,7 +1,7 @@
 [
     {
         "name": "keycloak",
-        "image": "jboss/keycloak:11.0.0",
+        "image": "394497726199.dkr.ecr.us-west-1.amazonaws.com/h1st/keycloak:latest",
         "cpu": 2048,
         "memory": 2048,
         "environment": [
