@@ -1,0 +1,13 @@
+providers:
+  file:
+    directory: /opt/traefik/conf
+    watch: true
+
+entryPoints:
+  web:
+    address: ":80"
+
+api:
+  dashboard: true
+
+accessLog: {}

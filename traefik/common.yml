@@ -1,0 +1,7 @@
+http:
+    middlewares:
+      strip_project:
+        stripPrefixRegex:
+          regex:
+            - "/project/[a-z0-9]+/"
+  

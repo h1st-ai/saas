@@ -129,3 +129,9 @@ dmypy.json
 .pyre/
 
 scratch
+
+
+/workbench-controller/traefik-conf
+/traefik/traefik
+/traefik/local.yaml
+/traefik/conf

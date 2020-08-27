@@ -1,0 +1,13 @@
+providers:
+  file:
+    directory: ./conf
+    watch: true
+
+entryPoints:
+  web:
+    address: ":8080"
+
+api:
+  dashboard: true
+
+accessLog: {}
