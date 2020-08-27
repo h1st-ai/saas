@@ -2,9 +2,13 @@ import boto3
 import ulid
 import h1st_saas.config as config
 import h1st_saas.util as util
+from h1st_saas.gateway_controller import GatewayController
 
 
 class WorkbenchController:
+    def __init__(self):
+        self._gw = GatewayController()
+
     def list_workbench(self, user):
         dyn = boto3.client('dynamodb')
         resp = dyn.query(
@@ -19,14 +23,7 @@ class WorkbenchController:
 
         result = []
         for i in resp['Items']:
-            v = {}
-
-            # flatten the dict
-            for k in i:
-                x = list(i[k].keys())[0]
-                v[k] = i[k][x]
-
-            result.append(v)
+            result.append(self._flatten_item(i))
 
         return result
 
@@ -63,6 +60,9 @@ class WorkbenchController:
                 )
 
         return wid
+
+    def get(self, user, wid):
+        return self._get_item(user, wid, True)
 
     def get_status(self, user, wid):
         ecs = boto3.client('ecs')
@@ -104,6 +104,10 @@ class WorkbenchController:
             update = {
                 'status': 'stopped'
             }
+
+        if 'private_endpoint' in update:
+            # TODO: the gateway should be able to pull this by himself
+            self._gw.setup(wid, update['private_endpoint'])
 
         if update:
             self._update_item(user, wid, update)
@@ -159,6 +163,8 @@ class WorkbenchController:
             'status': 'stopped'
         })
 
+        self._gw.destroy(wid)
+
     def destroy(self, user, wid):
         """
         Destroy a workbench, all data will be lost
@@ -202,7 +208,7 @@ class WorkbenchController:
             'workbench_id': {'S': wid},
         }
 
-    def _get_item(self, user, wid):
+    def _get_item(self, user, wid, flatten=False):
         dyn = boto3.client('dynamodb')
         item = dyn.get_item(
             TableName=config.DYNDB_TABLE,
@@ -213,6 +219,9 @@ class WorkbenchController:
 
         if not item:
             raise RuntimeError("Workbench is not valid")
+
+        if flatten:
+            item = self._flatten_item(item)
 
         return item
 
@@ -233,3 +242,13 @@ class WorkbenchController:
             Key=self._item_key(user, wid), 
             AttributeUpdates=updates
         )
+
+    def _flatten_item(self, i):
+        v = {}
+
+        # flatten the dict
+        for k in i:
+            x = list(i[k].keys())[0]
+            v[k] = i[k][x]
+
+        return v

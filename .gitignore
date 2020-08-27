@@ -130,8 +130,10 @@ dmypy.json
 
 scratch
 
-
 /workbench-controller/traefik-conf
+/workbench-controller/.env
+
+
 /traefik/traefik
 /traefik/local.yaml
 /traefik/conf

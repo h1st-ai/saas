@@ -3,7 +3,7 @@
 ### Workbench
 
 Push image to ECR `394497726199.dkr.ecr.us-west-1.amazonaws.com/h1st/workbench:latest` to update the workbench image.
-Versioning will come later.
+Currently, it always deploy latest image from the container, versioning will come later.
 
 ### Treafik
 
