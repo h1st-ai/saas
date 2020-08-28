@@ -37,7 +37,7 @@ Response
 ```
 
 Create new workbenches for a user
-IMPORTANT: call this after creating/starting workbench to make sure status is **running**
+IMPORTANT: call /workbenches/{wid} after creating/starting workbench until the status is **running**
 
 ```
 POST /workbenches?user_id=xyz
@@ -54,7 +54,6 @@ Response:
 ```
 
 Get workbench details
-IMPORTANT: call this after creating/starting workbench to make sure status is **running**
 
 ```
 GET /workbenches/{wid}
@@ -73,7 +72,7 @@ Response
 ```
 
 Start a workbench. If the workbench is already running, then this API does nothing
-IMPORTANT: call this after creating/starting workbench to make sure status is **running**
+IMPORTANT: call /workbenches/{wid} after creating/starting workbench until the status is **running**
 
 ```
 POST /workbenches/{wid}/start
