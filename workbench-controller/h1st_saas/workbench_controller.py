@@ -1,8 +1,12 @@
 import boto3
 import ulid
+import logging
 import h1st_saas.config as config
 import h1st_saas.util as util
 from h1st_saas.gateway_controller import GatewayController
+
+
+logger = logging.getLogger(__name__)
 
 
 class WorkbenchController:
@@ -126,7 +130,8 @@ class WorkbenchController:
         Start a stopped workbench
         """
         item = self._get_item(user, wid)
-        
+        task_arn = None
+
         if 'task_arn' not in item:
             try:
                 result = self._start(user, wid)
@@ -145,6 +150,8 @@ class WorkbenchController:
                         task=task_arn,
                         reason='Launch failure',
                     )
+
+                raise
         else:
             # TODO: make sure the container is running
             self.refresh(user, wid)

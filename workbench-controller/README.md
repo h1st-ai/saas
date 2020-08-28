@@ -11,6 +11,11 @@ If there is a `.env` on the current directory, it will also read from that file.
 
 Default port is `8999`.
 
+To deploy
+
+```
+PUSH=yes ./build.sh && ./deploy.sh
+```
 
 ## API
 
@@ -88,3 +93,7 @@ Response
   "success": true
 }
 ```
+
+## References
+
+  * ECR tagging requires user to enable this tag setting. See [this](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/ecs-modifying-longer-id-settings.html).

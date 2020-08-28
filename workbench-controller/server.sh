@@ -3,13 +3,13 @@
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 
 if [ -f "$DIR/.env" ]; then
-    set -a
-    . "$DIR/.env"
-    set +a
+    echo "Loading environment file ..."
+    export $(grep -v '#.*' .env | xargs)
 fi
 
 # virtualenv
 if [ -f "$DIR/venv" ]; then
+    echo "Activating virtualenv ..."
     export PATH=$DIR/venv/bin:$PATH
 fi
 

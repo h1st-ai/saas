@@ -2,6 +2,7 @@ import os
 from h1st_saas import config
 import yaml
 import tempfile
+import shutil
 
 
 class GatewayController:
@@ -26,10 +27,14 @@ class GatewayController:
         }
 
         with tempfile.NamedTemporaryFile(mode="w", delete=False) as f:
-            yaml.dump(cfg, f)
-            f.flush()
+            try:
+                yaml.dump(cfg, f)
+                f.flush()
 
-            os.rename(f.name, os.path.join(config.TRAEFIK_CONF_DIR, cfg_id + ".yml"))
+                shutil.move(f.name, os.path.join(config.TRAEFIK_CONF_DIR, cfg_id + ".yml"))
+            except:
+                os.unlink(f.name)
+                raise
 
     def destroy(self, wid):
         f = os.path.join(config.TRAEFIK_CONF_DIR, "wb-" + wid + ".yml")

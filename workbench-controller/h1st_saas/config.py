@@ -6,7 +6,7 @@ RESTAPI_AUTH_DEBUG_KEY = os.environ.get('RESTAPI_AUTH_DEBUG_KEY', None)
 
 TRAEFIK_CONF_DIR = os.environ.get(
     'TRAEFIK_CONF_DIR', 
-    os.path.dirname(__file__) + '/../traefik-conf'
+    os.path.dirname(__file__) + '/../traefik-config'
 )
 
 # no trailing slash
