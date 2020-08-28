@@ -11,11 +11,15 @@ If there is a `.env` on the current directory, it will also read from that file.
 
 Default port is `8999`.
 
+## Deployment
+
 To deploy
 
 ```
 PUSH=yes ./build.sh && ./deploy.sh
 ```
+
+Currently, it is deployed manually on `10.30.0.142`, and the permissions was created manually for user `h1st_saas`.
 
 ## API
 
@@ -56,8 +60,7 @@ Response:
 Get workbench details
 
 ```
-GET /workbenches/{wid}
-Content-Type: application/json
+GET /workbenches/{wid}?user_id=xyz
 
 Response
 {
@@ -75,7 +78,7 @@ Start a workbench. If the workbench is already running, then this API does nothi
 IMPORTANT: call /workbenches/{wid} after creating/starting workbench until the status is **running**
 
 ```
-POST /workbenches/{wid}/start
+POST /workbenches/{wid}/start?user_id=xyz
 
 Response
 {
@@ -85,7 +88,7 @@ Response
 
 Stop a workbench. If the workbench is already stopped, then this API does nothing
 ```
-POST /workbenches/{wid}/stop
+POST /workbenches/{wid}/stop?user_id=xyz
 
 Response
 {
@@ -95,4 +98,4 @@ Response
 
 ## References
 
-  * ECR tagging requires user to enable this tag setting. See [this](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/ecs-modifying-longer-id-settings.html).
+  * ECR requires user to enable long tag ARN setting. This was done manually. See [this](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/ecs-modifying-longer-id-settings.html).
