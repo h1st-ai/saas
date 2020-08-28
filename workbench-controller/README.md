@@ -110,6 +110,16 @@ Response
 }
 ```
 
+Destroy a workbench, this will destroy all data of workbecnh
+```
+DELETE /workbenches/{wid}?user_id=xyz
+
+Response
+{
+  "success": true
+}
+```
+
 ## References
 
   * ECR requires user to enable long tag ARN setting. This was done manually. See [this](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/ecs-modifying-longer-id-settings.html).
