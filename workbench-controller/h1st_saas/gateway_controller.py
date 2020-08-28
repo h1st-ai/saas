@@ -39,3 +39,7 @@ class GatewayController:
             return True
 
         return False
+
+    def sync_all(self):
+        # TODO: sync all gateway instances
+        pass

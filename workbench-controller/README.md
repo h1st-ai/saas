@@ -14,6 +14,9 @@ Default port is `8999`.
 
 ## API
 
+
+Note: current API requires to pass user via query string. In next version, it will extract directly from keycloak.
+
 List workbenches for a user:
 
 ```
@@ -29,13 +32,10 @@ Response
 ```
 
 Create new workbenches for a user
+IMPORTANT: call this after creating/starting workbench to make sure status is **running**
 
 ```
-POST /workbenches
-Content-Type: application/json
-{
-  "user_id": "xyz"
-}
+POST /workbenches?user_id=xyz
 
 Response:
 {
@@ -48,7 +48,8 @@ Response:
 }
 ```
 
-Query status of a workbench. IMPORTANT: call this after creating/starting workbench to make sure status is **running**
+Get workbench details
+IMPORTANT: call this after creating/starting workbench to make sure status is **running**
 
 ```
 GET /workbenches/{wid}
@@ -66,3 +67,24 @@ Response
 }
 ```
 
+Start a workbench. If the workbench is already running, then this API does nothing
+IMPORTANT: call this after creating/starting workbench to make sure status is **running**
+
+```
+POST /workbenches/{wid}/start
+
+Response
+{
+  "success": true
+}
+```
+
+Stop a workbench. If the workbench is already stopped, then this API does nothing
+```
+POST /workbenches/{wid}/stop
+
+Response
+{
+  "success": true
+}
+```

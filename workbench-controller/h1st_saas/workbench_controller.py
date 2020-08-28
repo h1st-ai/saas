@@ -61,19 +61,25 @@ class WorkbenchController:
 
         return wid
 
-    def get(self, user, wid):
+    def get(self, user, wid, refresh=False):
+        if refresh:
+            return self.refresh(user, wid)
+
         return self._get_item(user, wid, True)
 
-    def get_status(self, user, wid):
+    def refresh(self, user, wid):
+        """
+        Refresh the status of a workbench and return the updated instance
+        """
         ecs = boto3.client('ecs')
         ec2 = boto3.client('ec2')
 
-        item = self._get_item(user, wid)
+        item = self._get_item(user, wid, True)
 
         update = {}
         
         if 'task_arn' in item:
-            tasks = ecs.describe_tasks(cluster=config.ECS_CLUSTER, tasks=[item['task_arn']['S']])['tasks']
+            tasks = ecs.describe_tasks(cluster=config.ECS_CLUSTER, tasks=[item['task_arn']])['tasks']
             
             if tasks:
                 task = tasks[0]
@@ -112,7 +118,8 @@ class WorkbenchController:
         if update:
             self._update_item(user, wid, update)
 
-        return update['status']
+        item.update(update)
+        return item
 
     def start(self, user, wid):
         """
@@ -140,7 +147,7 @@ class WorkbenchController:
                     )
         else:
             # TODO: make sure the container is running
-            status = self.get_status(user, wid)
+            self.refresh(user, wid)
 
     def stop(self, user, wid):
         """
