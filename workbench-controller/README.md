@@ -11,6 +11,13 @@ If there is a `.env` on the current directory, it will also read from that file.
 
 Default port is `8999`.
 
+## Workbench Image
+
+Workbench controller uses image from `394497726199.dkr.ecr.us-west-1.amazonaws.com/h1st/workbench:latest`.
+Push to that repo, then start/stop again to use latest image.
+
+Currently, it always deploy latest image from the container, versioning will come later.
+
 ## Deployment
 
 To deploy
