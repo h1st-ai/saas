@@ -84,14 +84,21 @@ class WorkbenchController:
         
         if 'task_arn' in item:
             tasks = ecs.describe_tasks(cluster=config.ECS_CLUSTER, tasks=[item['task_arn']])['tasks']
-            
+
             if tasks:
                 task = tasks[0]
 
                 ecs_status = task['lastStatus'].lower()
 
                 if ecs_status == 'running' and 'endpoint' not in item:
-                    containerPort = task['containers'][0]['networkBindings'][0]['hostPort']
+                    container = None
+
+                    for i in range(len(task['containers'])):
+                        if task['containers'][i]['name'] == 'workbench':
+                            container = task['containers'][i]
+                            break
+
+                    containerPort = container['networkBindings'][0]['hostPort']
                     
                     containerInstances = ecs.describe_container_instances(
                         cluster=config.ECS_CLUSTER, containerInstances=[task['containerInstanceArn']]
@@ -102,9 +109,13 @@ class WorkbenchController:
                     privateAddr = (instances['Reservations'][0]['Instances'][0]['PrivateIpAddress'])
 
                     update['private_endpoint'] = f"http://{privateAddr}:{containerPort}"
+                elif ecs_status == 'stopped':
+                    # TODO: something is wrong here
+                    pass
 
                 update['status'] = ecs_status
             else:
+                logger.warn(f"Found invalid task arn {task_arn} for workbench {wid}")
                 update = {
                     'status': 'stopped',
                     'task_arn': None,
@@ -116,7 +127,7 @@ class WorkbenchController:
             }
 
         if 'private_endpoint' in update:
-            # TODO: the gateway should be able to pull this by himself
+            # TODO: the gateway should be able to pull this by itself
             self._gw.setup(wid, update['private_endpoint'])
 
         if update:
@@ -192,6 +203,18 @@ class WorkbenchController:
 
     def _start(self, user, wid):
         ecs = boto3.client('ecs')
+
+        # TODO: permission isolation between customers
+        init_cmd = " && ".join([
+            "mkdir -p /efs/data/ws-" + wid,
+            "chown 1001:1001 /efs/data/ws-" + wid,
+        ])
+
+        ws_cmd = [
+            "-c",
+            f"ln -s /efs/data/ws-{wid} /home/project/workspace && " + config.WB_BOOT_COMMAND
+        ]
+
         result = ecs.run_task(
             cluster=config.ECS_CLUSTER,
             taskDefinition=config.ECS_TASK_DEFINITION,
@@ -199,12 +222,17 @@ class WorkbenchController:
                 'containerOverrides': [
                     {
                         'name': 'workbench',
-                        'environment': [
-                            {'name': 'WB_USER', 'value': user},
-                            {'name': 'WB_ID', 'value': wid}
-                        ],
+                        # 'environment': [
+                        #     {'name': 'WB_USER', 'value': user},
+                        #     {'name': 'WB_ID', 'value': wid}
+                        # ],
                         'cpu': 1024,
                         'memory': 2048,
+                        "command": ws_cmd,
+                    },
+                    {
+                        'name': 'initializer',
+                        'command': ["bash", "-c", init_cmd]
                     }
                 ]
             },

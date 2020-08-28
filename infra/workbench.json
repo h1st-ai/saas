@@ -1,16 +1,42 @@
 [
     {
         "name": "workbench",
+        "essential": true,
         "image": "394497726199.dkr.ecr.us-west-1.amazonaws.com/h1st/workbench:latest",
         "cpu": 2048,
         "memory": 2048,
+        "entrypoint": ["/bin/sh"],
+        "command": [
+            "-c",
+            "node /home/theia/src-gen/backend/main.js /home/project --hostname=0.0.0.0"
+        ],
         "environment": [
             
         ],
-        "essential": true,
         "portMappings": [
             {
                 "containerPort": 3000
+            }
+        ],
+        "mountPoints": [
+            {
+                "containerPath": "/efs",
+                "sourceVolume": "efs"
+            }
+        ]
+    },
+    {
+        "name": "initializer",
+        "essential": false,
+        "image": "python:3.7",
+        "memoryReservation": 128,
+        "command": [
+            "ls", "-la", "/efs"
+        ],
+        "mountPoints": [
+            {
+                "containerPath": "/efs",
+                "sourceVolume": "efs"
             }
         ]
     }

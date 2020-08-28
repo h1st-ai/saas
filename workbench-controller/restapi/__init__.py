@@ -85,9 +85,10 @@ def workbenches_delete(wid):
     uid = get_user_id()
 
     try:
+        WorkbenchController().destroy(uid, wid)
+
         return {
             "success": True,
-            "item": WorkbenchController().get(uid, wid)
         }
     except Exception as ex:
         return {

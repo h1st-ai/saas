@@ -18,6 +18,13 @@ Push to that repo, then start/stop again to use latest image.
 
 Currently, it always deploy latest image from the container, versioning will come later.
 
+**IMPORTANT**: Workbench controller overrides the command of the container to do some setup before starting the workbench.
+To update the command, go to `config.py` and edit the `WB_BOOT_COMMAND`.
+
+## Workbench Storage
+
+All the file systems of the workbences are stored under EFS. The EFS is mounted and symlink to current working folder.
+
 ## Deployment
 
 To deploy
