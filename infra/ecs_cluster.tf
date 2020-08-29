@@ -47,7 +47,7 @@ resource "aws_launch_configuration" "ecs_as_conf" {
   name_prefix = "ecs_as_"
 
   image_id      = data.aws_ami.ecs_ami.id
-  instance_type = "m5.xlarge"
+  instance_type = "c5.2xlarge"
 
   iam_instance_profile = aws_iam_instance_profile.ecs_instance_profile.name
   associate_public_ip_address = false
@@ -85,7 +85,7 @@ resource "aws_autoscaling_group" "ecs" {
   protect_from_scale_in = true
 
   desired_capacity = 1
-  max_size         = 5
+  max_size         = 10
   min_size         = 1
 
   lifecycle {

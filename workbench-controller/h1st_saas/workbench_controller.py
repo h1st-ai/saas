@@ -237,6 +237,7 @@ class WorkbenchController:
 
         # TODO: permission isolation between customers
         init_cmd = " && ".join([
+            "set -ex",
             "mkdir -p /efs/data/ws-" + wid,
             "chown 1001:1001 /efs/data/ws-" + wid,
         ])

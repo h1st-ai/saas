@@ -18,6 +18,14 @@
                 "containerPort": 3000
             }
         ],
+        "logConfiguration": {
+            "logDriver": "awslogs",
+            "options": {
+                "awslogs-group": "/h1st/containers",
+                "awslogs-region": "us-west-1",
+                "awslogs-stream-prefix": "workbench"
+            }
+        },
         "mountPoints": [
             {
                 "containerPath": "/efs",
@@ -33,6 +41,14 @@
         "command": [
             "ls", "-la", "/efs"
         ],
+        "logConfiguration": {
+            "logDriver": "awslogs",
+            "options": {
+                "awslogs-group": "/h1st/containers",
+                "awslogs-region": "us-west-1",
+                "awslogs-stream-prefix": "workbench"
+            }
+        },
         "mountPoints": [
             {
                 "containerPath": "/efs",
