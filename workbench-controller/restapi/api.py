@@ -32,20 +32,23 @@ def workbenches_list():
 @bp.route("/workbenches", methods=["POST"])
 @auth_require()
 def workbenches_launch():
-    # data = request.get_json()
-    # if not data or 'user_id' not in data or not data['user_id']:
-    #     return {
-    #         'success': False,
-    #         'error': {
-    #             'message': 'Request body must be JSON object with "user_id" field',
-    #         }
-    #     }, 400
+    data = request.get_json()
+    if not data:
+        data = {}
+
+    if data and not isinstance(data, dict):
+        return {
+            'success': False,
+            'error': {
+                'message': 'Request body must be JSON object',
+            }
+        }, 400
 
     uid = get_user_id()
 
     try:
         wb = WorkbenchController()
-        wid = wb.launch(uid)
+        wid = wb.launch(uid, data.get('workbench_name', ''))
 
         return {
             'success': True,

@@ -17,6 +17,7 @@ export PORT=${PORT-8999}
 export ENVIRONMENT=${ENVIRONMENT:-"development"}
 
 if [[ "$ENVIRONMENT" == "production" ]]; then
+    python worker.py &
     exec gunicorn -w 4 -b "0.0.0.0:$PORT" --log-level info --access-logfile - server:app 2>&1
 else
     FLASK_ENV=development FLASK_APP=server.py exec python -m flask run --port $PORT

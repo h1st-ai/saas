@@ -45,16 +45,24 @@ class WorkbenchController:
 
         return result
 
-    def launch(self, user):
+    def launch(self, user, workbench_name=""):
         wid = util.random_char()  # TODO: conflict
         dyn = boto3.client('dynamodb')
         ecs = boto3.client('ecs')
 
         user = str(user)
+
+        if not workbench_name:
+            workbench_name = "wb-" + wid
+        else:
+            workbench_name = str(workbench_name)
+
         task_arn = None
 
         try:
-            result = self._start(user, wid)
+            result = self._start(user, wid, {
+                'workbench_name': workbench_name,
+            })
             task_arn = result['tasks'][0]['taskArn']
             version_arn = result['tasks'][0]['taskDefinitionArn']
 
@@ -63,6 +71,7 @@ class WorkbenchController:
                 Item={
                     'user_id': { 'S': user, },
                     'workbench_id': { 'S': wid, },
+                    'workbench_name': { 'S': workbench_name },
                     'task_arn': { 'S': task_arn, },
                     'version_arn': { 'S': version_arn },
                     'status': { 'S': 'starting' },
@@ -154,12 +163,12 @@ class WorkbenchController:
         """
         Start a stopped workbench
         """
-        item = self._get_item(user, wid)
+        item = self._get_item(user, wid, True)
         task_arn = None
 
         if 'task_arn' not in item:
             try:
-                result = self._start(user, wid)
+                result = self._start(user, wid, item)
                 task_arn = result['tasks'][0]['taskArn']
                 version_arn = result['tasks'][0]['taskDefinitionArn']
 
@@ -215,8 +224,16 @@ class WorkbenchController:
             Key=self._item_key(user, wid)
         )
 
-    def _start(self, user, wid):
+    def _start(self, user, wid, item=None):
         ecs = boto3.client('ecs')
+        item = item or {}
+
+        envvar = [
+            {'name': 'WORKBENCH_ID', 'value': str(wid)}
+        ]
+
+        if 'workbench_name' in item:
+            envvar.append({'name': 'WORKBENCH_NAME', 'value': str(item['workbench_name'])})
 
         # TODO: permission isolation between customers
         init_cmd = " && ".join([
@@ -236,10 +253,7 @@ class WorkbenchController:
                 'containerOverrides': [
                     {
                         'name': 'workbench',
-                        # 'environment': [
-                        #     {'name': 'WB_USER', 'value': user},
-                        #     {'name': 'WB_ID', 'value': wid}
-                        # ],
+                        'environment': envvar,
                         'cpu': 1024,
                         'memory': 2048,
                         "command": ws_cmd,

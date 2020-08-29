@@ -70,11 +70,19 @@ Response
 }
 ```
 
-Create new workbenches for a user
+Create new workbenches for a user.
+
+Parameters:
+  * `workbench_name`: Use this to pass as an environment variable `WORKBENCH_NAME` to the container
+
 IMPORTANT: call /workbenches/{wid} after creating/starting workbench until the status is **running**
 
 ```
 POST /workbenches?user_id=xyz
+Content-Type: application/json
+{
+  "workbench_name": "AutoCyber"
+}
 
 Response:
 {

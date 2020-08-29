@@ -7,7 +7,7 @@ COPY requirements.txt /app/
 RUN pip install --no-cache -r /app/requirements.txt
 COPY ./h1st_saas /app/h1st_saas
 COPY ./restapi /app/restapi
-COPY server.sh server.py /app/
+COPY server.sh server.py worker.py /app/
 
 
 ENV ENVIRONMENT=production \
