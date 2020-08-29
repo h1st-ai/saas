@@ -13,6 +13,20 @@ class WorkbenchController:
     def __init__(self):
         self._gw = GatewayController()
 
+    def sync(self):
+        dyn = boto3.client('dynamodb')
+
+        paginator = dyn.get_paginator('scan')
+        results = []
+        for page in paginator.paginate(TableName=config.DYNDB_TABLE):
+            for i in page['Items']:
+                r = self._flatten_item(i)
+
+                if r['status'] != 'stopped':
+                    results.append(self.refresh(r['user_id'], r['workbench_id']))
+
+        return results
+
     def list_workbench(self, user):
         dyn = boto3.client('dynamodb')
         resp = dyn.query(

@@ -31,7 +31,7 @@ def auth_require():
                             auth_token,
                             config.RESTAPI_AUTH_JWT_KEY, algorithms=['HS256'],
                             opions={
-                                'require_exp': True,
+                                'require_exp': True,  # for some reason it does not work
                                 'verify_exp': True
                             }
                         )

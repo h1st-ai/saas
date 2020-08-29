@@ -37,7 +37,7 @@ Currently, it is deployed manually on `10.30.0.142`, and the permissions was cre
 
 ## Authentication
 
-To enable authentication, set `RESTAPI_AUTH_STATIC_KEY` or `RESTAPI_AUTH_JWT_KEY` to a secret key
+To enable authentication, set `RESTAPI_AUTH_STATIC_KEY` or `RESTAPI_AUTH_JWT_KEY` to a secret key in environment or `.env` file.
 
   * If RESTAPI_AUTH_STATIC_KEY is set, the token is compared with this key
   * If RESTAPI_AUTH_JWT_KEY is set, the token is a JWT token, encoded with HS256. The token must have a valid `exp` claim in future
