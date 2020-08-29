@@ -35,6 +35,22 @@ PUSH=yes ./build.sh && ./deploy.sh
 
 Currently, it is deployed manually on `10.30.0.142`, and the permissions was created manually for user `h1st_saas`.
 
+## Authentication
+
+To enable authentication, set `RESTAPI_AUTH_STATIC_KEY` or `RESTAPI_AUTH_JWT_KEY` to a secret key
+
+  * If RESTAPI_AUTH_STATIC_KEY is set, the token is compared with this key
+  * If RESTAPI_AUTH_JWT_KEY is set, the token is a JWT token, encoded with HS256. The token must have a valid `exp` claim in future
+
+
+Currently, the server authentication is not enabled until @khoama is ready.
+
+To authenticate with the API server, use `Authorization` header with bearer token. Example
+
+```
+curl -H "Authorization: Bearer xyz" http://server/workbenches?user_id=abc
+```
+
 ## API
 
 
@@ -87,6 +103,8 @@ Response
   }
 }
 ```
+
+Possible statuses: stopped / starting / provisioning / pending / running (these are ECS status)
 
 Start a workbench. If the workbench is already running, then this API does nothing
 IMPORTANT: call /workbenches/{wid} after creating/starting workbench until the status is **running**

@@ -2,7 +2,7 @@ import os
 
 RESTAPI_URL_PREFIX = os.environ.get('RESTAPI_URL_PREFIX', '/')
 RESTAPI_AUTH_JWT_KEY = os.environ.get('RESTAPI_AUTH_JWT_KEY', None)
-RESTAPI_AUTH_DEBUG_KEY = os.environ.get('RESTAPI_AUTH_DEBUG_KEY', None)
+RESTAPI_AUTH_STATIC_KEY = os.environ.get('RESTAPI_AUTH_STATIC_KEY', None)
 
 TRAEFIK_CONF_DIR = os.environ.get(
     'TRAEFIK_CONF_DIR', 
