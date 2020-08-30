@@ -11,7 +11,7 @@ TRAEFIK_CONF_DIR = os.environ.get(
 
 # no trailing slash
 BASE_URL = "https://cloud.h1st.ai/project"
-WB_BOOT_COMMAND = "exec node /home/theia/src-gen/backend/main.js /home/project/workspace --hostname=0.0.0.0"
+WB_BOOT_COMMAND = "exec /app.sh"
 
 WB_DEFAULT_CPU = 1024
 WB_DEFAULT_RAM = 2048

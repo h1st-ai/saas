@@ -16,6 +16,16 @@ Default port is `8999`.
 Workbench controller uses image from `394497726199.dkr.ecr.us-west-1.amazonaws.com/h1st/workbench:latest`.
 Push to that repo, then start/stop again to use latest image.
 
+```
+REPO=394497726199.dkr.ecr.us-west-1.amazonaws.com
+aws ecr get-login-password --region us-west-1 | sudo docker login --username AWS --password-stdin $REPO
+docker build . -t h1st/workbench
+docker tag h1st/workbench:latest $REPO/h1st/workbench:latest
+docker push $REPO/h1st/workbench:latest
+```
+
+Current docker file of workbench: https://github.com/h1st-ai/ide
+
 Currently, it always deploy latest image from the container, versioning will come later.
 
 **IMPORTANT**: Workbench controller overrides the command of the container to do some setup before starting the workbench.
@@ -30,7 +40,7 @@ All the file systems of the workbences are stored under EFS. The EFS is mounted 
 To deploy
 
 ```
-PUSH=yes ./build.sh && ./deploy.sh
+PUSH=yes ./scripts/build.sh && ./scripts/deploy.sh
 ```
 
 Currently, it is deployed manually on `10.30.0.142`, and the permissions was created manually for user `h1st_saas`.
@@ -52,7 +62,6 @@ curl -H "Authorization: Bearer xyz" http://server/workbenches?user_id=abc
 ```
 
 ## API
-
 
 Note: current API requires to pass user via query string. In next version, it will extract directly from keycloak.
 

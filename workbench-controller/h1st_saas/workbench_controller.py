@@ -77,6 +77,7 @@ class WorkbenchController:
                     'workbench_id': { 'S': wid, },
                     'workbench_name': { 'S': workbench_name },
                     'task_arn': { 'S': task_arn, },
+                    'origin_task_arn': { 'S': task_arn, },
                     'version_arn': { 'S': version_arn },
                     'status': { 'S': 'starting' },
                     'desired_status': { 'S': 'running' },
@@ -183,6 +184,7 @@ class WorkbenchController:
                     'version_arn': version_arn,
                     'status': 'starting',
                     'desired_status': 'running',
+                    'origin_task_arn': task_arn,
                 })
             except:
                 if task_arn is not None:
@@ -253,9 +255,10 @@ class WorkbenchController:
             "chown 1001:1001 /efs/data/ws-" + wid,
         ])
 
+        # override the command of the container
         ws_cmd = [
-            "-c",
-            f"ln -s /efs/data/ws-{wid} {wb_path} && " + config.WB_BOOT_COMMAND
+            "bash", "-c",
+            f"mkdir -p /home/project && ln -s /efs/data/ws-{wid} {wb_path} && " + config.WB_BOOT_COMMAND,
         ]
 
         result = ecs.run_task(
