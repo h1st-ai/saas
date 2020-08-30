@@ -236,8 +236,11 @@ class WorkbenchController:
         ecs = boto3.client('ecs')
         item = item or {}
 
+        wb_path = "/home/project/workspace"
+
         envvar = [
-            {'name': 'WORKBENCH_ID', 'value': str(wid)}
+            {'name': 'WORKBENCH_ID', 'value': str(wid)},
+            {'name': 'WORKSPACE_PATH', 'value': wb_path,},
         ]
 
         if 'workbench_name' in item:
@@ -252,7 +255,7 @@ class WorkbenchController:
 
         ws_cmd = [
             "-c",
-            f"ln -s /efs/data/ws-{wid} /home/project/workspace && " + config.WB_BOOT_COMMAND
+            f"ln -s /efs/data/ws-{wid} {wb_path} && " + config.WB_BOOT_COMMAND
         ]
 
         result = ecs.run_task(
