@@ -50,6 +50,10 @@ class WorkbenchController:
         dyn = boto3.client('dynamodb')
         ecs = boto3.client('ecs')
 
+        # TODO: detect when we reach max capacity
+        if config.ECS_MAX_WB:
+            pass
+
         user = str(user)
 
         if not workbench_name:
@@ -75,6 +79,7 @@ class WorkbenchController:
                     'task_arn': { 'S': task_arn, },
                     'version_arn': { 'S': version_arn },
                     'status': { 'S': 'starting' },
+                    'desired_status': { 'S': 'running' },
                     'public_endpoint': { 'S': f'{config.BASE_URL}/{wid}/' },
                 }
             )
@@ -134,11 +139,12 @@ class WorkbenchController:
                     update['private_endpoint'] = f"http://{privateAddr}:{containerPort}"
                 elif ecs_status == 'stopped':
                     # TODO: something is wrong here
-                    pass
+                    logger.warn(f'Status is out of sync for workbench {wid}. Removing container info')
+                    update['task_arn'] = None
 
                 update['status'] = ecs_status
             else:
-                logger.warn(f"Found invalid task arn {task_arn} for workbench {wid}")
+                logger.warn(f"Found invalid task arn {item['task_arn']} for workbench {wid}")
                 update = {
                     'status': 'stopped',
                     'task_arn': None,
@@ -176,6 +182,7 @@ class WorkbenchController:
                     'task_arn': task_arn,
                     'version_arn': version_arn,
                     'status': 'starting',
+                    'desired_status': 'running',
                 })
             except:
                 if task_arn is not None:
@@ -208,7 +215,8 @@ class WorkbenchController:
         self._update_item(user, wid, {
             'task_arn': None,
             'private_endpoint': None,
-            'status': 'stopped'
+            'status': 'stopped',  # TODO: add "stopping" status
+            'desired_status': 'stopped',
         })
 
         self._gw.destroy(wid)
@@ -255,8 +263,8 @@ class WorkbenchController:
                     {
                         'name': 'workbench',
                         'environment': envvar,
-                        'cpu': 1024,
-                        'memory': 2048,
+                        'cpu': config.WB_DEFAULT_CPU,
+                        'memory': config.WB_DEFAULT_RAM,
                         "command": ws_cmd,
                     },
                     {

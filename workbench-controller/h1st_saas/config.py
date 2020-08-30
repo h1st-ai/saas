@@ -13,6 +13,11 @@ TRAEFIK_CONF_DIR = os.environ.get(
 BASE_URL = "https://cloud.h1st.ai/project"
 WB_BOOT_COMMAND = "exec node /home/theia/src-gen/backend/main.js /home/project/workspace --hostname=0.0.0.0"
 
+WB_DEFAULT_CPU = 1024
+WB_DEFAULT_RAM = 2048
+
+ECS_MAX_WB = int(os.environ.get('ECS_MAX_WB', 0))
+
 ECS_CLUSTER = "H1st"
 ECS_TASK_DEFINITION = "workbench"
 
