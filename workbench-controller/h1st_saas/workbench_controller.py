@@ -252,13 +252,13 @@ class WorkbenchController:
         init_cmd = " && ".join([
             "set -ex",
             "mkdir -p /efs/data/ws-" + wid,
-            "chown 1001:1001 /efs/data/ws-" + wid,
+            "chown 1000:1000 /efs/data/ws-" + wid,
         ])
 
         # override the command of the container
         ws_cmd = [
             "bash", "-c",
-            f"set -ex && mkdir -p /home/project && ln -s /efs/data/ws-{wid} {wb_path} && cat /app.sh && " + config.WB_BOOT_COMMAND,
+            f"set -ex && mkdir -p /home/project && ln -s /efs/data/ws-{wid} {wb_path} && " + config.WB_BOOT_COMMAND,
         ]
 
         result = ecs.run_task(
