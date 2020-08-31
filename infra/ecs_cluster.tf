@@ -86,7 +86,7 @@ resource "aws_autoscaling_group" "ecs" {
 
   desired_capacity = 1
   max_size         = 10
-  min_size         = 1
+  min_size         = 3
 
   lifecycle {
     create_before_destroy = true
