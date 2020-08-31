@@ -258,7 +258,7 @@ class WorkbenchController:
         # override the command of the container
         ws_cmd = [
             "bash", "-c",
-            f"mkdir -p /home/project && ln -s /efs/data/ws-{wid} {wb_path} && " + config.WB_BOOT_COMMAND,
+            f"set -ex && mkdir -p /home/project && ln -s /efs/data/ws-{wid} {wb_path} && cat /app.sh && " + config.WB_BOOT_COMMAND,
         ]
 
         result = ecs.run_task(
