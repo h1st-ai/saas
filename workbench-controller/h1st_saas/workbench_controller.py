@@ -238,7 +238,7 @@ class WorkbenchController:
         ecs = boto3.client('ecs')
         item = item or {}
 
-        wb_path = "/home/project/workspace"
+        wb_path = "/home/project"
 
         envvar = [
             {'name': 'WORKBENCH_ID', 'value': str(wid)},
@@ -256,7 +256,7 @@ class WorkbenchController:
         # override the command of the container
         ws_cmd = [
             "bash", "-c",
-            f"set -ex && mkdir -p /efs/data/ws-{wid} && mkdir -p /home/project && ln -s /efs/data/ws-{wid} {wb_path} && " + config.WB_BOOT_COMMAND,
+            f"set -ex && mkdir -p /efs/data/ws-{wid} && rm -rf {wb_path} && ln -s /efs/data/ws-{wid} {wb_path} && " + config.WB_BOOT_COMMAND,
         ]
 
         result = ecs.run_task(
