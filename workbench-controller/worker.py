@@ -9,3 +9,4 @@ if __name__ == "__main__":
         l = len(wc.sync())
         print(f"Sync {l} items")
         time.sleep(5)
+        break  # XXX

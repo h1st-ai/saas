@@ -63,8 +63,14 @@ resource "aws_launch_configuration" "ecs_as_conf" {
   user_data = data.template_file.worker_init.rendered
 
   root_block_device {
-    volume_size = 128
+    volume_size = 64
     volume_type = "gp2"
+  }
+
+  ebs_block_device {
+    device_name = "/dev/xvdcz"
+    volume_type = "gp2"
+    volume_size = 128
   }
 
   lifecycle {
