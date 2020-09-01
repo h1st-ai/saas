@@ -16,14 +16,26 @@ class WorkbenchController:
     def sync(self):
         dyn = boto3.client('dynamodb')
 
-        paginator = dyn.get_paginator('scan')
+        pager = dyn.get_paginator('scan').paginate(
+            TableName=config.DYNDB_TABLE,
+            IndexName='status-task_arn-index',
+        )
+
         results = []
-        for page in paginator.paginate(TableName=config.DYNDB_TABLE):
+        for page in pager:
             for i in page['Items']:
                 r = self._flatten_item(i)
 
                 if r['status'] != 'stopped':
-                    results.append(self.refresh(r['user_id'], r['workbench_id']))
+                    item = self.refresh(r['user_id'], r['workbench_id'])
+                    results.append(item)
+
+                    if item['status'] != r['status']:
+                        logger.info('Workbench %s: %s -> %s' % (
+                            item['workbench_id'],
+                            r['status'],
+                            item['status']
+                        ))
 
         return results
 
