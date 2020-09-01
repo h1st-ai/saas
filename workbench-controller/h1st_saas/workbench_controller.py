@@ -248,11 +248,6 @@ class WorkbenchController:
         if 'workbench_name' in item:
             envvar.append({'name': 'WORKBENCH_NAME', 'value': str(item['workbench_name'])})
 
-        # TODO: permission isolation between customers
-        init_cmd = " && ".join([
-            "ls -la"
-        ])
-
         # override the command of the container
         ws_cmd = [
             "bash", "-c",
@@ -270,10 +265,6 @@ class WorkbenchController:
                         'cpu': config.WB_DEFAULT_CPU,
                         'memory': config.WB_DEFAULT_RAM,
                         "command": ws_cmd,
-                    },
-                    {
-                        'name': 'initializer',
-                        'command': ["bash", "-c", init_cmd]
                     }
                 ]
             },

@@ -27,28 +27,5 @@
                 "sourceVolume": "efs"
             }
         ]
-    },
-    {
-        "name": "initializer",
-        "essential": false,
-        "image": "python:3.7",
-        "memoryReservation": 128,
-        "command": [
-            "ls", "-la", "/efs"
-        ],
-        "logConfiguration": {
-            "logDriver": "awslogs",
-            "options": {
-                "awslogs-group": "/h1st/containers",
-                "awslogs-region": "us-west-1",
-                "awslogs-stream-prefix": "workbench"
-            }
-        },
-        "mountPoints": [
-            {
-                "containerPath": "/efs",
-                "sourceVolume": "efs"
-            }
-        ]
     }
 ]
