@@ -11,13 +11,17 @@ class GatewayController:
 
     def setup(self, wid, endpoint):
         cfg_id = "wb-" + wid
+        mw = ['strip_project']
+
+        if config.TRAEFIK_AUTH_MIDDLEWARE:
+            mw = [config.TRAEFIK_AUTH_MIDDLEWARE] + mw
 
         cfg = {'http': {'services': {}, 'routers': {}}}
 
         cfg['http']['routers'][cfg_id] = {
             'rule': f"PathPrefix(`/project/{wid}/`)",
             'service': cfg_id,
-            'middlewares': ['strip_project'],
+            'middlewares': mw,
         }
 
         cfg['http']['services'][cfg_id] = {

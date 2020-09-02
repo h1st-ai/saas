@@ -168,7 +168,7 @@ class WorkbenchController:
                 'status': 'stopped'
             }
 
-        if 'private_endpoint' in update:
+        if 'private_endpoint' in update and update['private_endpoint'] != item.get('private_endpoint'):
             # TODO: the gateway should be able to pull this by itself
             self._gw.setup(wid, update['private_endpoint'])
 
@@ -252,9 +252,11 @@ class WorkbenchController:
 
         wb_path = "/home/project"
 
+        # TODO: save on s3
         envvar = [
             {'name': 'WORKBENCH_ID', 'value': str(wid)},
-            {'name': 'WORKSPACE_PATH', 'value': wb_path,},
+            {'name': 'WORKSPACE_PATH', 'value': wb_path},
+            {'name': 'H1ST_MODEL_REPO_PATH', 'value': f"${wb_path}/.models"}
         ]
 
         if 'workbench_name' in item:
@@ -283,6 +285,7 @@ class WorkbenchController:
             tags=[
                 {'key': 'Project', 'value': 'H1st'},
                 {'key': 'Workbench ID', 'value': wid},
+                {'key': 'User ID', 'value': user},
             ]
         )
 

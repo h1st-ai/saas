@@ -8,6 +8,7 @@ TRAEFIK_CONF_DIR = os.environ.get(
     'TRAEFIK_CONF_DIR', 
     os.path.dirname(__file__) + '/../traefik-config'
 )
+TRAEFIK_AUTH_MIDDLEWARE = os.environ.get('TRAEFIK_AUTH_MIDDLEWARE', '')
 
 # no trailing slash
 BASE_URL = "https://cloud.h1st.ai/project"
