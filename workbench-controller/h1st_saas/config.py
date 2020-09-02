@@ -17,6 +17,9 @@ WB_BOOT_COMMAND = "exec /app.sh"
 WB_DEFAULT_CPU = 1024
 WB_DEFAULT_RAM = 2048
 
+# set to public to make sure public endpoint is ready before mark it ready
+WB_VERIFY_ENDPOINT = os.environ.get('WB_VERIFY_ENDPOINT', '')
+
 ECS_MAX_WB = int(os.environ.get('ECS_MAX_WB', 0))
 
 ECS_CLUSTER = "H1st"

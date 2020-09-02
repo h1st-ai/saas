@@ -1,6 +1,7 @@
 import boto3
 import ulid
 import logging
+import requests
 import h1st_saas.config as config
 import h1st_saas.util as util
 from h1st_saas.gateway_controller import GatewayController
@@ -131,7 +132,8 @@ class WorkbenchController:
 
                 ecs_status = task['lastStatus'].lower()
 
-                if ecs_status == 'running' and 'endpoint' not in item:
+                # the private endpoint won't change during the lifecycle
+                if ecs_status == 'running' and 'private_endpoint' not in item:
                     container = None
 
                     for i in range(len(task['containers'])):
@@ -164,15 +166,26 @@ class WorkbenchController:
                     'private_endpoint': None,
                 }
         else:
-            update = {
-                'status': 'stopped'
-            }
+            update = {'status': 'stopped'}
 
         if 'private_endpoint' in update and update['private_endpoint'] != item.get('private_endpoint'):
             # TODO: the gateway should be able to pull this by itself
             self._gw.setup(wid, update['private_endpoint'])
 
+            if config.WB_VERIFY_ENDPOINT == 'public' and 'public_endpoint' in item:
+                try:
+                    check = requests.head(item['public_endpoint'])
+                    if check.status_code >= 400:
+                        logger.warn(f"Workbench {wid} container status is running but endpoint return {check.status_code}")
+                        update = {'status': 'pending'}
+                    else:
+                        logger.info(f'Workbench {wid} is ready')
+                except:
+                    logger.warn('Unable to verify endpoint ' + item['public_endpoint'])
+                    update = {'status': 'pending'}
+
         if update:
+            # print(update)
             self._update_item(user, wid, update)
 
         item.update(update)
