@@ -184,7 +184,6 @@ class WorkbenchController:
 
                         # XXX: still need to give it sometime to be ready
                         # best case is probably to have workbench ping us back when it is ready
-                        time.sleep(2)
                 except:
                     logger.warn('Unable to verify endpoint ' + item['public_endpoint'])
                     update = {'status': 'pending'}

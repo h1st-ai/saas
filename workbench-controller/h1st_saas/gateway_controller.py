@@ -26,7 +26,12 @@ class GatewayController:
 
         cfg['http']['services'][cfg_id] = {
             'loadBalancer': {
-                'servers': [{'url': endpoint}]
+                'servers': [{'url': endpoint}],
+                'healthcheck': {
+                    'path': '/',
+                    'interval': 10,
+                    'timeout': 3,
+                }
             }
         }
 
