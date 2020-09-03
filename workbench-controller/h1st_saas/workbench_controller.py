@@ -274,7 +274,8 @@ class WorkbenchController:
         envvar = [
             {'name': 'WORKBENCH_ID', 'value': str(wid)},
             {'name': 'WORKSPACE_PATH', 'value': wb_path},
-            {'name': 'H1ST_MODEL_REPO_PATH', 'value': f"${wb_path}/.models"}
+            {'name': 'H1ST_MODEL_REPO_PATH', 'value': f"${wb_path}/.models"},
+            {'name': 'PYTHONPATH', 'value': wb_path},
         ]
 
         if 'workbench_name' in item:
