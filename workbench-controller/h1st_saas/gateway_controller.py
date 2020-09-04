@@ -1,24 +1,17 @@
 import os
+from h1st_saas import config
 import yaml
 import tempfile
 import shutil
-import h1st_saas.config as config
+
 
 class GatewayController:
     def __init__(self):
         os.makedirs(config.TRAEFIK_CONF_DIR, exist_ok=True)
 
-    def setup(self, obj_type, obj_id, endpoint):
-        if obj_type == 'project':
-            cfg_id = "wb-" + obj_id
-            mw = ['strip_project']
-            path_prefix = f'/project/{obj_id}/'
-        elif obj_type == 'deployment':
-            cfg_id = "deployment-" + obj_id
-            mw = ['strip_deployment']
-            path_prefix = f'/deployment/{obj_id}/'
-        else:
-            raise Exception(f'Gateway for "{obj_type}" is not supported')
+    def setup(self, wid, endpoint):
+        cfg_id = "wb-" + wid
+        mw = ['strip_project']
 
         if config.TRAEFIK_AUTH_MIDDLEWARE:
             mw = [config.TRAEFIK_AUTH_MIDDLEWARE] + mw
@@ -26,7 +19,7 @@ class GatewayController:
         cfg = {'http': {'services': {}, 'routers': {}}}
 
         cfg['http']['routers'][cfg_id] = {
-            'rule': f"PathPrefix(`{path_prefix}`)",
+            'rule': f"PathPrefix(`/project/{wid}/`)",
             'service': cfg_id,
             'middlewares': mw,
         }
@@ -52,15 +45,8 @@ class GatewayController:
                 os.unlink(f.name)
                 raise
 
-    def destroy(self, obj_type, obj_id):
-        if obj_type == 'project':
-            cfg_id = "wb-" + obj_id
-        elif obj_type == 'deployment':
-            cfg_id = "wb-" + obj_id
-        else:
-            raise Exception(f'Gateway for "{obj_type}" is not supported')
-
-        f = os.path.join(config.TRAEFIK_CONF_DIR, cfg_id + ".yml")
+    def destroy(self, wid):
+        f = os.path.join(config.TRAEFIK_CONF_DIR, "wb-" + wid + ".yml")
 
         if os.path.exists(f):
             os.unlink(f)

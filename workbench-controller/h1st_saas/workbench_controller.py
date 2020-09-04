@@ -3,9 +3,9 @@ import ulid
 import logging
 import time
 import requests
+import h1st_saas.config as config
 import h1st_saas.util as util
 from h1st_saas.gateway_controller import GatewayController
-import h1st_saas.config as config
 
 
 logger = logging.getLogger(__name__)
@@ -19,14 +19,14 @@ class WorkbenchController:
         dyn = boto3.client('dynamodb')
 
         pager = dyn.get_paginator('scan').paginate(
-            TableName=config.WB_DYNDB_TABLE,
+            TableName=config.DYNDB_TABLE,
             IndexName='status-task_arn-index',
         )
 
         results = []
         for page in pager:
             for i in page['Items']:
-                r = util.flatten_dyndb_item(i)
+                r = self._flatten_item(i)
 
                 if r['status'] != 'stopped':
                     item = self.refresh(r['user_id'], r['workbench_id'])
@@ -44,7 +44,7 @@ class WorkbenchController:
     def list_workbench(self, user):
         dyn = boto3.client('dynamodb')
         resp = dyn.query(
-            TableName=config.WB_DYNDB_TABLE,
+            TableName=config.DYNDB_TABLE,
             KeyConditions={
                 'user_id': {
                     'AttributeValueList': [{'S': user}],
@@ -55,7 +55,7 @@ class WorkbenchController:
 
         result = []
         for i in resp['Items']:
-            result.append(util.flatten_dyndb_item(i))
+            result.append(self._flatten_item(i))
 
         return result
 
@@ -65,7 +65,7 @@ class WorkbenchController:
         ecs = boto3.client('ecs')
 
         # TODO: detect when we reach max capacity
-        if config.WB_ECS_MAX:
+        if config.ECS_MAX_WB:
             pass
 
         user = str(user)
@@ -85,7 +85,7 @@ class WorkbenchController:
             version_arn = result['tasks'][0]['taskDefinitionArn']
 
             dyn.put_item(
-                TableName=config.WB_DYNDB_TABLE,
+                TableName=config.DYNDB_TABLE,
                 Item={
                     'user_id': { 'S': user, },
                     'workbench_id': { 'S': wid, },
@@ -95,11 +95,10 @@ class WorkbenchController:
                     'version_arn': { 'S': version_arn },
                     'status': { 'S': 'starting' },
                     'desired_status': { 'S': 'running' },
-                    'public_endpoint': { 'S': f'{config.WB_BASE_URL}/{wid}/' },
+                    'public_endpoint': { 'S': f'{config.BASE_URL}/{wid}/' },
                 }
             )
-        except Exception as e:
-            print(e)
+        except:
             if task_arn is not None:
                 ecs.stop_task(
                     cluster=config.ECS_CLUSTER,
@@ -172,7 +171,7 @@ class WorkbenchController:
 
         if 'private_endpoint' in update and update['private_endpoint'] != item.get('private_endpoint'):
             # TODO: the gateway should be able to pull this by itself
-            self._gw.setup('project', wid, update['private_endpoint'])
+            self._gw.setup(wid, update['private_endpoint'])
 
             if config.WB_VERIFY_ENDPOINT == 'public' and 'public_endpoint' in item:
                 try:
@@ -200,8 +199,6 @@ class WorkbenchController:
         """
         Start a stopped workbench
         """
-        ecs = boto3.client('ecs')
-        
         item = self._get_item(user, wid, True)
         task_arn = None
 
@@ -253,7 +250,7 @@ class WorkbenchController:
             'desired_status': 'stopped',
         })
 
-        self._gw.destroy('project', wid)
+        self._gw.destroy(wid)
 
     def destroy(self, user, wid):
         """
@@ -262,7 +259,7 @@ class WorkbenchController:
         self.stop(user, wid)
         dyn = boto3.client('dynamodb')
         dyn.delete_item(
-            TableName=config.WB_DYNDB_TABLE,
+            TableName=config.DYNDB_TABLE,
             Key=self._item_key(user, wid)
         )
 
@@ -291,7 +288,7 @@ class WorkbenchController:
 
         result = ecs.run_task(
             cluster=config.ECS_CLUSTER,
-            taskDefinition=config.WB_ECS_TASK_DEFINITION,
+            taskDefinition=config.ECS_TASK_DEFINITION,
             overrides={
                 'containerOverrides': [
                     {
@@ -321,7 +318,7 @@ class WorkbenchController:
     def _get_item(self, user, wid, flatten=False):
         dyn = boto3.client('dynamodb')
         item = dyn.get_item(
-            TableName=config.WB_DYNDB_TABLE,
+            TableName=config.DYNDB_TABLE,
             Key={
                 'user_id': {'S': user},
                 'workbench_id': {'S': wid},
@@ -331,7 +328,7 @@ class WorkbenchController:
             raise RuntimeError("Workbench is not valid")
 
         if flatten:
-            item = util.flatten_dyndb_item(item)
+            item = self._flatten_item(item)
 
         return item
 
@@ -348,7 +345,17 @@ class WorkbenchController:
 
         dyn = boto3.client('dynamodb')
         dyn.update_item(
-            TableName=config.WB_DYNDB_TABLE,
+            TableName=config.DYNDB_TABLE,
             Key=self._item_key(user, wid), 
             AttributeUpdates=updates
         )
+
+    def _flatten_item(self, i):
+        v = {}
+
+        # flatten the dict
+        for k in i:
+            x = list(i[k].keys())[0]
+            v[k] = i[k][x]
+
+        return v

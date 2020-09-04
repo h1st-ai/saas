@@ -1,9 +1,24 @@
-from flask import Blueprint, current_app, request, json
-from h1st_saas import WorkbenchController
+from flask import Blueprint, current_app, request, json, make_response
+from werkzeug.exceptions import HTTPException
+from h1st_saas.workbench_controller import WorkbenchController
 from .auth import auth_require
-from .util import get_user_id
 
 bp = Blueprint('restapi', __name__)
+
+def get_user_id():
+    if 'user_id' not in request.args:
+        raise HTTPException(
+            400, 
+            response=make_response({
+                'success': False,
+                'error': {
+                    'message': 'user_id is missing'
+                }
+            })
+        )
+
+    return request.args.get('user_id')
+
 
 @bp.route("/workbenches")
 @auth_require()
