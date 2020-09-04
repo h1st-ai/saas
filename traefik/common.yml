@@ -4,4 +4,8 @@ http:
         stripPrefixRegex:
           regex:
             - "/project/[a-z0-9]+/"
+      strip_deployment:
+        stripPrefixRegex:
+          regex:
+            - "/deployment/[a-z0-9]+/"
   

@@ -1,11 +1,12 @@
 import logging
 
 from flask import Flask
-from restapi import bp
+from restapi import bp, deployment_bp
 from h1st_saas import config
 
 app = Flask(__name__)
 app.register_blueprint(bp, url_prefix=config.RESTAPI_URL_PREFIX)
+app.register_blueprint(deployment_bp, url_prefix=config.RESTAPI_URL_PREFIX)
 
 if __name__ != "__main__":
     gunicorn_logger = logging.getLogger('gunicorn.error')

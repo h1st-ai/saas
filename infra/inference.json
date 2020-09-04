@@ -1,0 +1,31 @@
+[
+    {
+        "name": "inference",
+        "essential": true,
+        "image": "394497726199.dkr.ecr.us-west-1.amazonaws.com/h1st/inference:latest",
+        "cpu": 2048,
+        "memory": 2048,
+        "environment": [
+            
+        ],
+        "portMappings": [
+            {
+                "containerPort": 3000
+            }
+        ],
+        "logConfiguration": {
+            "logDriver": "awslogs",
+            "options": {
+                "awslogs-group": "/h1st/containers",
+                "awslogs-region": "us-west-1",
+                "awslogs-stream-prefix": "inference"
+            }
+        },
+        "mountPoints": [
+            {
+                "containerPath": "/efs",
+                "sourceVolume": "efs"
+            }
+        ]
+    }
+]

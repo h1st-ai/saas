@@ -1,22 +1,22 @@
 from flask import Blueprint, current_app, request, json
-from h1st_saas import WorkbenchController
+from h1st_saas import DeploymentController
 from .auth import auth_require
 from .util import get_user_id
 
-bp = Blueprint('restapi', __name__)
+bp = Blueprint('deployment_api', __name__)
 
-@bp.route("/workbenches")
+@bp.route("/deployments")
 @auth_require()
-def workbenches_list():
+def all():
     return {
         "success": True,
-        "items": WorkbenchController().list_workbench(get_user_id())
+        "items": DeploymentController().all(get_user_id())
     }
 
 
-@bp.route("/workbenches", methods=["POST"])
+@bp.route("/deployments", methods=["POST"])
 @auth_require()
-def workbenches_launch():
+def deploy():
     data = request.get_json()
     if not data:
         data = {}
@@ -32,53 +32,53 @@ def workbenches_launch():
     uid = get_user_id()
 
     try:
-        wb = WorkbenchController()
-        wid = wb.launch(uid, data.get('workbench_name', ''))
+        dc = DeploymentController()
+        did = dc.launch(uid, data.get('deployment_name', ''))
 
         return {
             'success': True,
             'item': {
                 'user_id': uid,
-                'workbench_id': wid,
+                'deployment_id': did,
             }
         }, 201
     except Exception as ex:
         return {
             'success': False,
             'error': {
-                'message': 'Unable to launch new workbench',
+                'message': 'Unable to launch new deployment',
                 'reason': str(ex),
             }
         }, 500
 
 
-@bp.route("/workbenches/<wid>")
+@bp.route("/deployments/<did>")
 @auth_require()
-def workbenches_get(wid):
+def get(did):
     uid = get_user_id()
 
     try:
         return {
             "success": True,
-            "item": WorkbenchController().get(uid, wid, True)
+            "item": DeploymentController().get(uid, did, True)
         }
     except Exception as ex:
         return {
             'success': False,
             'error': {
-                'message': 'Unable to get workbench status',
+                'message': 'Unable to get deployment status',
                 'reason': str(ex),
             }
         }, 500
 
 
-@bp.route("/workbenches/<wid>", methods=["DELETE"])
+@bp.route("/deployments/<did>", methods=["DELETE"])
 @auth_require()
-def workbenches_delete(wid):
+def undeploy(did):
     uid = get_user_id()
 
     try:
-        WorkbenchController().destroy(uid, wid)
+        DeploymentController().destroy(uid, did)
 
         return {
             "success": True,
@@ -87,18 +87,18 @@ def workbenches_delete(wid):
         return {
             'success': False,
             'error': {
-                'message': 'Unable to delete workbench',
+                'message': 'Unable to delete deployment',
                 'reason': str(ex)
             }
         }, 500
 
 
-@bp.route("/workbenches/<wid>/start", methods=["POST"])
+@bp.route("/deployments/<did>/start", methods=["POST"])
 @auth_require()
-def workbenches_start(wid):
+def start(did):
     uid = get_user_id()
     try:
-        WorkbenchController().start(uid, wid)
+        DeploymentController().start(uid, did)
 
         return {
             "success": True,
@@ -107,18 +107,18 @@ def workbenches_start(wid):
         return {
             'success': False,
             'error': {
-                'message': 'Unable to start workbench',
+                'message': 'Unable to start deployment',
                 'reason': str(ex)
             }
         }, 500
 
 
-@bp.route("/workbenches/<wid>/stop", methods=["POST"])
+@bp.route("/deployments/<did>/stop", methods=["POST"])
 @auth_require()
-def workbenches_stop(wid):
+def stop(did):
     uid = get_user_id()
     try:
-        WorkbenchController().stop(uid, wid)
+        DeploymentController().stop(uid, did)
 
         return {
             "success": True,
@@ -127,7 +127,7 @@ def workbenches_stop(wid):
         return {
             'success': False,
             'error': {
-                'message': 'Unable to stop workbench',
+                'message': 'Unable to stop deployment',
                 'reason': str(ex)
             }
         }, 500
