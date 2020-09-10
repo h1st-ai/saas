@@ -14,3 +14,15 @@ provider "aws" {
 provider "template" {
   
 }
+
+variable "ecs_cluster" {
+  default = "H1st-staging"
+}
+
+variable "environment_tag" {
+  default = "STAGING"
+}
+
+variable "project_tag" {
+  default = "H1st"
+}
