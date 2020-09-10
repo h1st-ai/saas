@@ -1,5 +1,5 @@
 resource "aws_network_interface" "gateway" {
-  subnet_id = data.aws_subnet.public_1a.id
+  subnet_id = data.aws_subnet.nat_1a.id
   security_groups = [
     data.aws_security_group.infra_gateway.id,
     data.aws_security_group.infra_web.id,
@@ -36,5 +36,38 @@ resource "aws_instance" "gateway" {
     Name          = "Gateway - ${var.environment_tag}"
 
     # always-on     = "true"
+  }
+}
+
+resource "aws_lb_target_group" "gateway" {
+  name     = "h1st-gateway-${var.environment_tag}"
+  port     = 80
+  protocol = "HTTP"
+  vpc_id   = data.aws_vpc.vpc.id
+}
+
+resource "aws_lb_target_group_attachment" "gateway" {
+  target_group_arn = aws_lb_target_group.gateway.arn
+  target_id        = aws_instance.gateway.id
+}
+
+resource "aws_lb_listener_rule" "gateway" {
+  listener_arn = var.lb_https_listener
+
+  action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.gateway.arn
+  }
+
+  condition {
+    path_pattern {
+      values = ["/project/*"]
+    }
+  }
+
+  condition {
+    host_header {
+      values = ["staging.h1st.ai"]
+    }
   }
 }
