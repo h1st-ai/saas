@@ -115,7 +115,7 @@ resource "aws_autoscaling_group" "ecs" {
 
   tag {
     key                 = "Environment"
-    value               = "DEV"
+    value               = "PROD"
     propagate_at_launch = true
   }
 
