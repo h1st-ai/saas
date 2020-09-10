@@ -14,8 +14,3 @@ provider "aws" {
 provider "template" {
   
 }
-
-# allow access to PROD RDS
-data "aws_security_group" "infra_rds" {
-  id = "sg-0c79b76a99b9bc595"
-}

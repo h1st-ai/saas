@@ -3,6 +3,7 @@ resource "aws_network_interface" "gateway" {
   security_groups = [
     data.aws_security_group.infra_gateway.id,
     data.aws_security_group.infra_web.id,
+    data.aws_security_group.infra_rds.id,
   ]
 
   # source_dest_check      = false
@@ -59,11 +60,11 @@ resource "aws_lb_listener_rule" "gateway" {
     target_group_arn = aws_lb_target_group.gateway.arn
   }
 
-  condition {
-    path_pattern {
-      values = ["/project/*"]
-    }
-  }
+  # condition {
+  #   path_pattern {
+  #     values = ["/project/*"]
+  #   }
+  # }
 
   condition {
     host_header {

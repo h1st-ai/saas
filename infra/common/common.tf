@@ -30,6 +30,11 @@ data "aws_security_group" "infra_web" {
   id = "sg-01f3b408dd73fd7de"
 }
 
+# allow access to RDS
+data "aws_security_group" "infra_rds" {
+  id = "sg-0c79b76a99b9bc595"
+}
+
 data "aws_security_group" "infra_gateway" {
   id = "sg-0dfdbe4bf39efaa86"
 }
