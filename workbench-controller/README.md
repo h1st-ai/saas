@@ -14,7 +14,6 @@ Default port is `8999`.
 ## Workbench Image
 
 Workbench controller uses image from `394497726199.dkr.ecr.us-west-1.amazonaws.com/h1st/workbench:latest`.
-Push to that repo, then start/stop again to use latest image.
 
 ```
 REPO=394497726199.dkr.ecr.us-west-1.amazonaws.com
@@ -26,7 +25,8 @@ docker push $REPO/h1st/workbench:latest
 
 Current docker file of workbench: https://github.com/h1st-ai/ide
 
-Currently, it always deploy latest image from the container, versioning will come later.
+For staging, it will always use the `latest` tag image
+For prod, it will use the image defined in `infra/prod/workbench.json`
 
 **IMPORTANT**: Workbench controller overrides the command of the container to do some setup before starting the workbench.
 To update the command, go to `config.py` and edit the `WB_BOOT_COMMAND`.
