@@ -1,9 +1,58 @@
+resource "aws_security_group" "gateway" {
+  name        = "gateway-staging"
+  description = "Gateway Staging"
+  vpc_id      = data.aws_vpc.vpc.id
+
+  # ingress {
+  #   from_port   = 0
+  #   to_port     = 0
+  #   protocol    = "-1"
+  #   cidr_blocks = ["0.0.0.0/0"]
+  # }
+
+  # egress {
+  #   from_port   = 0
+  #   to_port     = 0
+  #   protocol    = "-1"
+  #   cidr_blocks = ["0.0.0.0/0"]
+  # }
+
+  tags = {
+    Name = "Gateway Staging"
+  }
+}
+
+resource "aws_security_group" "gateway_access" {
+  name        = "gateway-staging-access"
+  description = "Gateway Staging Access"
+  vpc_id      = data.aws_vpc.vpc.id
+
+  ingress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    security_groups = [aws_security_group.gateway.id]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = {
+    Name = "Allow access from Gateway Staging"
+  }
+}
+
 resource "aws_network_interface" "gateway" {
   subnet_id = data.aws_subnet.nat_1a.id
   security_groups = [
     data.aws_security_group.infra_gateway.id,
     data.aws_security_group.infra_web.id,
     data.aws_security_group.infra_rds.id,
+    aws_security_group.gateway.id,
   ]
 
   # source_dest_check      = false

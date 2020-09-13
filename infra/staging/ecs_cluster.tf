@@ -29,6 +29,7 @@ resource "aws_launch_configuration" "ecs_as_conf" {
     data.aws_security_group.infra_efs.id,
     data.aws_security_group.infra_gateway.id,
     data.aws_security_group.infra_web.id,
+    aws_security_group.gateway_access.id,
     # data.aws_security_group.infra_rds.id,
   ]
 
