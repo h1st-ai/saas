@@ -1,11 +1,4 @@
-provider "aws" {
-  version = "~> 3.0"
-  region  = "us-west-1"
-}
-
-provider "template" {
-  
-}
+# common infrastructure setup
 
 data "aws_vpc" "vpc" {
   id = "vpc-008a670427932b3b7"
@@ -13,6 +6,10 @@ data "aws_vpc" "vpc" {
 
 data "aws_subnet" "public_1a" {
   id = "subnet-011f013cad6710f69"
+}
+
+data "aws_subnet" "nat_1a" {
+  id = "subnet-05328d842dd3de7b9"
 }
 
 data "aws_subnet" "public_1b" {
@@ -40,4 +37,8 @@ data "aws_security_group" "infra_rds" {
 
 data "aws_security_group" "infra_gateway" {
   id = "sg-0dfdbe4bf39efaa86"
+}
+
+variable "lb_https_listener" {
+  default = "arn:aws:elasticloadbalancing:us-west-1:394497726199:listener/app/h1st-lb/08becaddc92dc8c6/3d6c032b3f32f2b7"
 }

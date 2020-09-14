@@ -3,7 +3,14 @@
 REPO=394497726199.dkr.ecr.us-west-1.amazonaws.com
 TAG=latest
 
-HOST=10.30.0.142
+CLUSTER=${1:-"dev"}
+
+if [[ "$1" == "PROD" ]]; then
+    HOST=10.30.0.142
+else
+    HOST=10.30.128.207
+fi
+
 ssh ubuntu@$HOST << EOF
     cd /opt/workbench-controller
     export \$(grep -v '#.*' .env | xargs)

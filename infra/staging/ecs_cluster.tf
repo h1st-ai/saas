@@ -12,51 +12,25 @@ data "template_file" "worker_init" {
   template = "${file("${path.module}/ecs_userdata.txt")}"
 
   vars = {
-    cluster = "H1st"
+    cluster = var.ecs_cluster
   }
-}
-
-data "aws_iam_policy_document" "ecs_instance_assume_role_policy" {
-  statement {
-    actions = ["sts:AssumeRole"]
-
-    principals {
-      type        = "Service"
-      identifiers = ["ec2.amazonaws.com"]
-    }
-  }
-}
-
-resource "aws_iam_role" "ecs_instance_role" {
-  name               = "ecs-instance-role-h1st"
-  assume_role_policy = data.aws_iam_policy_document.ecs_instance_assume_role_policy.json
-}
-
-resource "aws_iam_role_policy_attachment" "ecs_instance_role_policy" {
-  role       = aws_iam_role.ecs_instance_role.name
-  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonEC2ContainerServiceforEC2Role"
-}
-
-resource "aws_iam_instance_profile" "ecs_instance_profile" {
-  name = "ecsInstanceRole-h1st"
-  path = "/"
-  role = aws_iam_role.ecs_instance_role.name
 }
 
 resource "aws_launch_configuration" "ecs_as_conf" {
-  name_prefix = "ecs_as_"
+  name_prefix = "h1st_staging_"
 
   image_id      = data.aws_ami.ecs_ami.id
   instance_type = "c5.2xlarge"
 
-  iam_instance_profile = aws_iam_instance_profile.ecs_instance_profile.name
+  iam_instance_profile = "ecsInstanceRole-h1st"  # TODO: do we need different role for staging?
   associate_public_ip_address = false
 
   security_groups = [
     data.aws_security_group.infra_efs.id,
     data.aws_security_group.infra_gateway.id,
     data.aws_security_group.infra_web.id,
-    data.aws_security_group.infra_rds.id,
+    aws_security_group.gateway_access.id,
+    # data.aws_security_group.infra_rds.id,
   ]
 
   key_name  = "bao"
@@ -79,7 +53,7 @@ resource "aws_launch_configuration" "ecs_as_conf" {
 }
 
 resource "aws_autoscaling_group" "ecs" {
-  name = "ecs-h1st"
+  name = "ecs-h1st-staging"
 
   launch_configuration = aws_launch_configuration.ecs_as_conf.id
   termination_policies = ["OldestLaunchConfiguration", "Default"]
@@ -92,7 +66,7 @@ resource "aws_autoscaling_group" "ecs" {
 
   desired_capacity = 1
   max_size         = 10
-  min_size         = 3
+  min_size         = 1
 
   lifecycle {
     create_before_destroy = true
@@ -103,7 +77,7 @@ resource "aws_autoscaling_group" "ecs" {
 
   tag {
     key                 = "Name"
-    value               = "ecs-h1st"
+    value               = "ecs-h1st-staging"
     propagate_at_launch = true
   }
 
@@ -115,7 +89,7 @@ resource "aws_autoscaling_group" "ecs" {
 
   tag {
     key                 = "Environment"
-    value               = "DEV"
+    value               = var.environment_tag
     propagate_at_launch = true
   }
 
