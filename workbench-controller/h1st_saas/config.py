@@ -23,7 +23,7 @@ WB_VERIFY_ENDPOINT = os.environ.get('WB_VERIFY_ENDPOINT', '')
 ECS_MAX_WB = int(os.environ.get('ECS_MAX_WB', 0))
 
 ECS_CLUSTER = os.environ.get('ECS_CLUSTER', 'H1st')
-ECS_TASK_DEFINITION = "workbench"
+ECS_TASK_DEFINITION = os.environ.get('ECS_TASK_DEFINITION', "workbench")
 
 DYNDB_TABLE = os.environ.get('DYNDB_TABLE', 'H1st_saas_workbench')
 
