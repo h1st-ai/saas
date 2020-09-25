@@ -31,6 +31,10 @@ For prod, it will use the image defined in `infra/prod/workbench.json`
 **IMPORTANT**: Workbench controller overrides the command of the container to do some setup before starting the workbench.
 To update the command, go to `config.py` and edit the `WB_BOOT_COMMAND`.
 
+## Troubleshooting
+
+  * Restarting the container inside the instance will make the container unaccessible due to the port is assigned randomly per instance, and ECS does not pick up the updated port.
+
 ## Workbench Storage
 
 All the file systems of the workbences are stored under EFS. The EFS is mounted and symlink to current working folder.

@@ -44,7 +44,7 @@ resource "aws_launch_configuration" "ecs_as_conf" {
   ebs_block_device {
     device_name = "/dev/xvdcz"
     volume_type = "gp2"
-    volume_size = 128
+    volume_size = 192
   }
 
   lifecycle {

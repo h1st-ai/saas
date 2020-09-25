@@ -27,6 +27,8 @@ ECS_TASK_DEFINITION = os.environ.get('ECS_TASK_DEFINITION', "workbench")
 
 DYNDB_TABLE = os.environ.get('DYNDB_TABLE', 'H1st_saas_workbench')
 
+GA_ID = os.environ.get('GA_ID', 'UA-40192392-8')
+
 # make aws sdk works correctly
 AWS_REGION = "us-west-1"
 os.environ['AWS_DEFAULT_REGION'] = AWS_REGION
