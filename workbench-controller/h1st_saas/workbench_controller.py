@@ -220,6 +220,7 @@ class WorkbenchController:
                     'status': 'starting',
                     'desired_status': 'running',
                     'origin_task_arn': task_arn,
+                    'public_endpoint': f'{config.BASE_URL}/{wid}/',  # this to make sure it picks up latest endpoint config
                 })
             except:
                 if task_arn is not None:
