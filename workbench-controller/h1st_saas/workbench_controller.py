@@ -47,7 +47,12 @@ class WorkbenchController:
         if user:
             resp = dyn.query(
                 TableName=config.DYNDB_TABLE,
-                KeyConditions=kc
+                KeyConditions={
+                    'user_id': {
+                        'AttributeValueList': [{'S': user}],
+                        'ComparisonOperator': 'EQ'
+                    }
+                }
             )
         else:
             resp = dyn.scan(TableName=config.DYNDB_TABLE)
