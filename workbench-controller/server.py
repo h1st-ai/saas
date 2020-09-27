@@ -6,7 +6,11 @@ from restapi import bp
 from h1st_saas import config
 
 app = Flask(__name__)
-CORS(app)
+
+
+if config.RESTAPI_CORS_ORIGIN:
+    origins = [s.strip() for s in config.RESTAPI_CORS_ORIGIN.split(",")]
+    CORS(app, origins=origins)
 
 app.register_blueprint(bp, url_prefix=config.RESTAPI_URL_PREFIX)
 
