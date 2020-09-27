@@ -43,15 +43,14 @@ class WorkbenchController:
 
     def list_workbench(self, user):
         dyn = boto3.client('dynamodb')
-        resp = dyn.query(
-            TableName=config.DYNDB_TABLE,
-            KeyConditions={
-                'user_id': {
-                    'AttributeValueList': [{'S': user}],
-                    'ComparisonOperator': 'EQ'
-                }
-            }
-        )
+
+        if user:
+            resp = dyn.query(
+                TableName=config.DYNDB_TABLE,
+                KeyConditions=kc
+            )
+        else:
+            resp = dyn.scan(TableName=config.DYNDB_TABLE)
 
         result = []
         for i in resp['Items']:

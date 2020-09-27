@@ -5,3 +5,4 @@ pyjwt
 flask <= 1.1.2
 gunicorn <= 20.0.4
 requests <= 2.24
+flask-cors
