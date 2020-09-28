@@ -282,6 +282,15 @@ class WorkbenchController:
             {'name': 'GA_ID', 'value': config.GA_ID},
         ]
 
+        # jupyter
+        jupyter_url = f'{config.BASE_URL}/{wid}/jupyter'
+        envvar += [
+            {'name': 'JUPYTER_BASE_URL', 'value': jupyter_url},
+            {'name': 'JUPYTER_APP_URL', 'value': jupyter_url},
+            {'name': 'JUPYTER_WS_URL', 'value': jupyter_url.replace("https://", "wss://")},
+            {'name': 'JUPYTER_TOKEN', 'value': 'abc'},
+        ]
+
         if 'workbench_name' in item:
             envvar.append({'name': 'WORKBENCH_NAME', 'value': str(item['workbench_name'])})
 
