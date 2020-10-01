@@ -13,7 +13,7 @@
 
             {"name": "KEYCLOAK_USER", "value": "admin"},
             {"name": "KEYCLOAK_PASSWORD", "value": "adminkeycloak"},
-            {"name": "KEYCLOAK_FRONTEND_URL", "value": "https://cloud.h1st.ai/auth"}
+            {"name": "KEYCLOAK_FRONTEND_URL", "value": "https://login.h1st.ai/auth"}
         ],
         "essential": true,
         "portMappings": [
