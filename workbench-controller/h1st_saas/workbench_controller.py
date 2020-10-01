@@ -110,6 +110,8 @@ class WorkbenchController:
                     reason='Launch failure',
                 )
 
+            raise
+
         return wid
 
     def get(self, user, wid, refresh=False):
