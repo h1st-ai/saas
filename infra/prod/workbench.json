@@ -2,7 +2,7 @@
     {
         "name": "workbench",
         "essential": true,
-        "image": "394497726199.dkr.ecr.us-west-1.amazonaws.com/h1st/workbench:v0.1.0-ga",
+        "image": "394497726199.dkr.ecr.us-west-1.amazonaws.com/h1st/workbench:v0.2.0",
         "cpu": 2048,
         "memory": 2048,
         "environment": [
