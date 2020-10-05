@@ -1,4 +1,4 @@
-module Main exposing (main)
+port module Main exposing (main)
 
 import Browser
 import Controller as C exposing (Workbench)
@@ -24,6 +24,7 @@ init : () -> ( Model, Cmd Msg )
 init _ =
     ( { image = Nothing
       , workbenches = Dict.empty
+      , selectedWorkbench = Nothing
       , error = ""
       }
     , C.listWorkbenches GotWorkbenches
@@ -31,11 +32,17 @@ init _ =
 
 
 
+port askForConfirmation : String -> Cmd msg
+
+
+port confirmations : (Bool -> msg) -> Sub msg
+
 -- UPDATE
 
 
 type Msg
     = Loading
+    | UserConfirmed Bool
     | GotWorkbenches (Result Http.Error (List C.Workbench))
     | GotWorkbenchUpdate (Result Http.Error C.Workbench)
     | GotWorkbenchDeleted (Result Http.Error C.Workbench)
@@ -50,6 +57,14 @@ update msg model =
     case msg of
         Loading ->
             ( model, Cmd.none )
+
+        UserConfirmed ok -> 
+            if ok then 
+                case model.selectedWorkbench of
+                    Just wb -> (model, C.deleteWorkbench wb GotWorkbenchDeleted)
+                    Nothing -> (model, Cmd.none)
+            else
+                (model, Cmd.none)
 
         GotWorkbenches wb ->
             case wb of
@@ -77,7 +92,7 @@ update msg model =
             ( model, C.listWorkbenches GotWorkbenches )
 
         ClickedDeleteWorkbench wb ->
-            ( model, C.deleteWorkbench wb GotWorkbenchDeleted )
+            ( { model | selectedWorkbench = Just wb } , askForConfirmation "Do you want to delete this?")
 
         GotWorkbenchUpdate wb ->
             case wb of
@@ -102,7 +117,7 @@ update msg model =
 
 subscriptions : Model -> Sub Msg
 subscriptions _ =
-    Sub.none
+    confirmations UserConfirmed
 
 
 

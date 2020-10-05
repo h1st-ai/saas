@@ -17,6 +17,10 @@
       var app = Elm.Main.init({
         node: document.getElementById('app')
       });
+
+      app.ports.askForConfirmation.subscribe(function(message) {
+        app.ports.confirmations.send(window.confirm(message))
+      });
     </script>
   </body>
 </html>

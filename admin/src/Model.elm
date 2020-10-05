@@ -8,6 +8,7 @@ type alias Model =
     { image : Maybe String
     , error : String
     , workbenches : Dict.Dict String Workbench
+    , selectedWorkbench : Maybe Workbench
     }
 
 

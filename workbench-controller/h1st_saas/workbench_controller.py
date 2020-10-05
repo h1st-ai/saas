@@ -181,7 +181,7 @@ class WorkbenchController:
 
             if config.WB_VERIFY_ENDPOINT == 'public' and 'public_endpoint' in item:
                 try:
-                    check = requests.head(item['public_endpoint'])
+                    check = requests.get(item['public_endpoint'])
                     if check.status_code >= 400:
                         logger.warn(f"Workbench {wid} container status is running but endpoint return {check.status_code}")
                         update = {'status': 'pending'}
