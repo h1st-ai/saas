@@ -9,6 +9,8 @@ import Html.Attributes exposing (class, href, src, style, target)
 import Html.Events exposing (onClick)
 import Http
 import Model exposing (Model, mergeWorkbenches)
+import Process
+import Task exposing (andThen)
 
 
 main =
@@ -27,9 +29,8 @@ init _ =
       , selectedWorkbench = Nothing
       , error = ""
       }
-    , C.listWorkbenches GotWorkbenches
+    , C.listWorkbenchesTask |> Task.attempt GotWorkbenches
     )
-
 
 
 port askForConfirmation : String -> Cmd msg
@@ -37,16 +38,16 @@ port askForConfirmation : String -> Cmd msg
 
 port confirmations : (Bool -> msg) -> Sub msg
 
+
+
 -- UPDATE
 
 
 type Msg
-    = Loading
-    | UserConfirmed Bool
+    = UserConfirmed Bool
     | GotWorkbenches (Result Http.Error (List C.Workbench))
     | GotWorkbenchUpdate (Result Http.Error C.Workbench)
     | GotWorkbenchDeleted (Result Http.Error C.Workbench)
-    | ClickedRefreshWorkbench
     | ClickedStartWorbench C.Workbench
     | ClickedStopWorkbench C.Workbench
     | ClickedDeleteWorkbench C.Workbench
@@ -55,44 +56,34 @@ type Msg
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
-        Loading ->
-            ( model, Cmd.none )
-
-        UserConfirmed ok -> 
-            if ok then 
+        UserConfirmed ok ->
+            if ok then
                 case model.selectedWorkbench of
-                    Just wb -> (model, C.deleteWorkbench wb GotWorkbenchDeleted)
-                    Nothing -> (model, Cmd.none)
+                    Just wb ->
+                        ( model, C.deleteWorkbench wb GotWorkbenchDeleted )
+
+                    Nothing ->
+                        ( model, Cmd.none )
+
             else
-                (model, Cmd.none)
+                ( model, Cmd.none )
 
         GotWorkbenches wb ->
             case wb of
                 Ok wbList ->
-                    ( mergeWorkbenches model wbList, Cmd.none )
+                    ( mergeWorkbenches model wbList, Process.sleep 3000 |> Task.andThen (\_ -> C.listWorkbenchesTask) |> Task.attempt GotWorkbenches )
 
                 Err err ->
                     ( { model | error = Debug.toString err }, Cmd.none )
 
         ClickedStartWorbench wb ->
-            let
-                wbs =
-                    Dict.insert wb.id { wb | status = "starting" } model.workbenches
-            in
-            ( { model | workbenches = wbs }, C.startWorkbench wb GotWorkbenchUpdate )
+            ( model, C.startWorkbench wb GotWorkbenchUpdate )
 
         ClickedStopWorkbench wb ->
-            let
-                wbs =
-                    Dict.insert wb.id { wb | status = "stopping" } model.workbenches
-            in
-            ( { model | workbenches = wbs }, C.stopWorkbench wb GotWorkbenchUpdate )
-
-        ClickedRefreshWorkbench ->
-            ( model, C.listWorkbenches GotWorkbenches )
+            ( model, C.stopWorkbench wb GotWorkbenchUpdate )
 
         ClickedDeleteWorkbench wb ->
-            ( { model | selectedWorkbench = Just wb } , askForConfirmation "Do you want to delete this?")
+            ( { model | selectedWorkbench = Just wb }, askForConfirmation "Do you want to delete this?" )
 
         GotWorkbenchUpdate wb ->
             case wb of
@@ -105,7 +96,7 @@ update msg model =
         GotWorkbenchDeleted res ->
             case res of
                 Ok wb ->
-                    ( { model | workbenches = Dict.remove wb.id model.workbenches }, Cmd.none )
+                    ( Model.removeWorkbench model wb, Cmd.none )
 
                 Err _ ->
                     ( model, Cmd.none )
@@ -117,7 +108,7 @@ update msg model =
 
 subscriptions : Model -> Sub Msg
 subscriptions _ =
-    confirmations UserConfirmed
+    Sub.batch [ confirmations UserConfirmed ]
 
 
 
@@ -128,8 +119,7 @@ view : Model -> Html Msg
 view model =
     div [ class "container-xl" ]
         [ div [ style "padding" "5px" ]
-            [ button [ class "btn btn-secondary", onClick ClickedRefreshWorkbench ] [ text "Refresh" ]
-            ]
+            []
         , viewError model
         , viewTable model
         ]
@@ -162,7 +152,7 @@ viewTable model =
 viewRow : ( String, C.Workbench ) -> Html Msg
 viewRow ( _, wb ) =
     tr []
-        [ td [] [ a [ href wb.public_endpoint, target "_blank" ] [ text wb.id ] ]
+        [ td [] [ a [ href (wb.public_endpoint ++ "#/home/project"), target "_blank" ] [ text wb.id ] ]
         , td []
             [ text wb.name
             , div [ class "subtitle" ] [ text wb.user_id ]

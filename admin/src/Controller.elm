@@ -1,6 +1,7 @@
 module Controller exposing (..)
 
 import Http
+import Http.Tasks
 import Json.Decode exposing (Decoder, field, list, string, succeed)
 import Json.Decode.Pipeline exposing (optional, required)
 import Task exposing (Task)
@@ -46,25 +47,12 @@ stopWorkbenchEndpoint wb =
     UB.crossOrigin host [ "workbenches", wb.id, "stop" ] [ UB.string "user_id" wb.user_id ]
 
 
-listWorkbenches : (Result Http.Error (List Workbench) -> a) -> Cmd a
-listWorkbenches msg =
-    Http.get
+listWorkbenchesTask : Task Http.Error (List Workbench)
+listWorkbenchesTask =
+    Http.Tasks.get
         { url = endpoint
-        , expect = Http.expectJson msg workbenchListDecoder
+        , resolver = Http.Tasks.resolveJson workbenchListDecoder
         }
-
-
-
--- listWorkbenchesTask : Task Http.Error (List Workbench)
--- listWorkbenchesTask =
---     Http.task {
---         method = "GET"
---         , url = endpoint
---         , headers = []
---         , timeout = Nothing
---         , body = Http.emptyBody
---         , resolver = Http.stringResolver (resolve Ok)
---     }
 
 
 refreshWorkbench : (Result Http.Error Workbench -> a) -> Cmd a
