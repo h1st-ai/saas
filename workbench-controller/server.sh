@@ -15,6 +15,7 @@ fi
 
 export PORT=${PORT-8999}
 export ENVIRONMENT=${ENVIRONMENT:-"development"}
+export PYTHONUNBUFFERED=1
 
 if [[ "$ENVIRONMENT" == "production" ]]; then
     python -u worker.py &

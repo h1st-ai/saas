@@ -22,3 +22,4 @@ if __name__ != "__main__":
     logger = logging.getLogger('h1st_saas')
     logger.handlers = gunicorn_logger.handlers
     logger.setLevel(gunicorn_logger.level)
+    logger.propagate = True

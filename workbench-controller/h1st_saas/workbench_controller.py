@@ -13,6 +13,10 @@ logger = logging.getLogger(__name__)
 
 class WorkbenchController:
     def __init__(self):
+        global logger
+
+        logger = logging.getLogger(__name__)
+
         self._gw = GatewayController()
 
     def sync(self):
@@ -179,9 +183,20 @@ class WorkbenchController:
             # TODO: the gateway should be able to pull this by itself
             self._gw.setup(wid, update['private_endpoint'])
 
-            if config.WB_VERIFY_ENDPOINT == 'public' and 'public_endpoint' in item:
+            if config.WB_VERIFY_ENDPOINT == 'private' and 'private_endpoint' in update:
                 try:
-                    check = requests.get(item['public_endpoint'])
+                    check = requests.get(update['private_endpoint'], timeout=0.5)
+                    if check.status_code >= 400:
+                        logger.warn(f"Workbench {wid} container status is running but endpoint return {check.status_code}")
+                        update = {'status': 'pending'}
+                    else:
+                        logger.info(f'Workbench {wid} is ready, status: {check.status_code}')
+                except:
+                    logger.warn('Unable to verify endpoint ' + update['private_endpoint'])
+                    update = {'status': 'pending'}
+            elif config.WB_VERIFY_ENDPOINT == 'public' and 'public_endpoint' in item:
+                try:
+                    check = requests.get(item['public_endpoint'], timeout=0.5)
                     if check.status_code >= 400:
                         logger.warn(f"Workbench {wid} container status is running but endpoint return {check.status_code}")
                         update = {'status': 'pending'}
