@@ -10,6 +10,9 @@ logger = logging.getLogger('worker')
 if __name__ == "__main__":
     wc = WorkbenchController()
     while True:
-        l = len(wc.sync())
-        # logger.info(f"Sync {l} items")
-        time.sleep(5)
+        try:
+            l = len(wc.sync())
+            # logger.info(f"Sync {l} items")
+            time.sleep(10)
+        except:
+            logger.exception("Error while syching the workbenches")

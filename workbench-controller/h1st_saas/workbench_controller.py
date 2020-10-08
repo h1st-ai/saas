@@ -183,31 +183,7 @@ class WorkbenchController:
             # TODO: the gateway should be able to pull this by itself
             self._gw.setup(wid, update['private_endpoint'])
 
-            if config.WB_VERIFY_ENDPOINT == 'private' and 'private_endpoint' in update:
-                try:
-                    check = requests.get(update['private_endpoint'], timeout=0.5)
-                    if check.status_code >= 400:
-                        logger.warn(f"Workbench {wid} container status is running but endpoint return {check.status_code}")
-                        update = {'status': 'pending'}
-                    else:
-                        logger.info(f'Workbench {wid} is ready, status: {check.status_code}')
-                except:
-                    logger.warn('Unable to verify endpoint ' + update['private_endpoint'])
-                    update = {'status': 'pending'}
-            elif config.WB_VERIFY_ENDPOINT == 'public' and 'public_endpoint' in item:
-                try:
-                    check = requests.get(item['public_endpoint'], timeout=0.5)
-                    if check.status_code >= 400:
-                        logger.warn(f"Workbench {wid} container status is running but endpoint return {check.status_code}")
-                        update = {'status': 'pending'}
-                    else:
-                        logger.info(f'Workbench {wid} is ready, status: {check.status_code}')
-
-                        # XXX: still need to give it sometime to be ready
-                        # best case is probably to have workbench ping us back when it is ready
-                except:
-                    logger.warn('Unable to verify endpoint ' + item['public_endpoint'])
-                    update = {'status': 'pending'}
+            update = self._verify_endpoint(wid, item, update)
 
         if update:
             # print(update)
@@ -391,3 +367,43 @@ class WorkbenchController:
             v[k] = i[k][x]
 
         return v
+
+    def _verify_endpoint(self, wid, item, update):
+        # verify both private and public
+        if 'private' in config.WB_VERIFY_ENDPOINT and 'private_endpoint' in update:
+            try:
+                check = requests.get(update['private_endpoint'], timeout=0.5)
+                if check.status_code >= 400:
+                    logger.warn(f"Workbench {wid} container status is running but private endpoint return {check.status_code}")
+                    update = {'status': 'pending'}
+                else:
+                    # also verify public endpoint
+                    if 'public_endpoint' in item:
+                        check = requests.get(item['public_endpoint'], timeout=0.5)
+                        if check.status_code >= 400:
+                            logger.warn(f"Workbench {wid} container status is running but public endpoint return {check.status_code}")
+                            update = {'status': 'pending'}
+                        else:
+                            logger.info(f'Workbench {wid} is ready, public endpoint status: {check.status_code}')
+                    else:
+                        logger.info(f'Workbench {wid} is ready, private endpoint status: {check.status_code}')
+            except:
+                logger.warn('Unable to verify endpoint ' + update['private_endpoint'])
+                update = {'status': 'pending'}
+
+        if 'public' in config.WB_VERIFY_ENDPOINT and 'public_endpoint' in item:
+            try:
+                check = requests.get(item['public_endpoint'], timeout=0.5)
+                if check.status_code >= 400:
+                    logger.warn(f"Workbench {wid} container status is running but endpoint return {check.status_code}")
+                    update = {'status': 'pending'}
+                else:
+                    logger.info(f'Workbench {wid} is ready, status: {check.status_code}')
+
+                    # XXX: still need to give it sometime to be ready
+                    # best case is probably to have workbench ping us back when it is ready
+            except:
+                logger.warn('Unable to verify endpoint ' + item['public_endpoint'])
+                update = {'status': 'pending'}
+
+        return update
