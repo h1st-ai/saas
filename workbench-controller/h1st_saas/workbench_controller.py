@@ -144,7 +144,7 @@ class WorkbenchController:
                 ecs_status = task['lastStatus'].lower()
 
                 # the private endpoint won't change during the lifecycle
-                if ecs_status == 'running' and 'private_endpoint' not in item:
+                if ecs_status == 'running' and ('private_endpoint' not in item or item['status'] == 'pending'):
                     container = None
 
                     for i in range(len(task['containers'])):
