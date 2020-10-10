@@ -71,7 +71,7 @@ resource "aws_instance" "gateway" {
   key_name  = "bao"
 
   network_interface {
-    network_interface_id = "${aws_network_interface.gateway.id}"
+    network_interface_id = aws_network_interface.gateway.id
     device_index = 0
   }
 
