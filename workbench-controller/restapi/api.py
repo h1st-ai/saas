@@ -1,6 +1,7 @@
 from flask import Blueprint, current_app, request, json, make_response
 from werkzeug.exceptions import HTTPException
 from h1st_saas.workbench_controller import WorkbenchController
+from h1st_saas.infra_controller import InfraController
 from .auth import auth_require
 
 bp = Blueprint('restapi', __name__)
@@ -58,6 +59,7 @@ def workbenches_launch():
             }
         }, 201
     except Exception as ex:
+        current_app.logger.exception('Unable to launch workbench')
         return {
             'success': False,
             'error': {
@@ -139,10 +141,69 @@ def workbenches_stop(wid):
             "success": True,
         }
     except Exception as ex:
+        current_app.logger.exception('Unable to stop workbench')
         return {
             'success': False,
             'error': {
                 'message': 'Unable to stop workbench',
+                'reason': str(ex)
+            }
+        }, 500
+
+
+@bp.route("/instances", methods=["GET"])
+@auth_require()
+def instances_get():
+    try:
+        instances = InfraController().list_instances()
+        return {
+            'success': True,
+            'items': list(instances.values())
+        }
+    except Exception as ex:
+        return {
+            'success': False,
+            'error': {
+                'message': 'Unable to retrieve instance list',
+                'reason': str(ex)
+            }
+        }, 500
+
+
+@bp.route("/instances/<iid>/drain", methods=["POST"])
+@auth_require()
+def instance_drain(iid):
+    try:
+        InfraController().drain_instance(iid)
+
+        return {
+            "success": True,
+        }
+    except Exception as ex:
+        current_app.logger.exception('Unable to drain instance')
+        return {
+            'success': False,
+            'error': {
+                'message': 'Unable to drain instance',
+                'reason': str(ex)
+            }
+        }, 500
+
+
+@bp.route("/providers", methods=["GET"])
+@auth_require()
+def provider_get():
+    try:
+        providers = InfraController().list_providers()
+        return {
+            'success': True,
+            'items': list(providers.values())
+        }
+    except Exception as ex:
+        return {
+            'success': False,
+            'error': {
+                'message': 'Unable to retrieve provider list',
                 'reason': str(ex)
             }
         }, 500

@@ -1,5 +1,6 @@
 import React from 'react';
 import WorkbenchService from '../services/workbench';
+// import { PencilIcon } from '@primer/octicons-react';
 
 export default class WorkbenchList extends React.Component {
   constructor(props) {
@@ -8,6 +9,7 @@ export default class WorkbenchList extends React.Component {
       this.svc = new WorkbenchService();
 
       this.timer = null;
+      this.unmount = false;
 
       this.state = {
           items: [],
@@ -17,15 +19,10 @@ export default class WorkbenchList extends React.Component {
 
   componentDidMount() {
     this.pollForUpdates();
-    // this.svc.listWorkbenches()
-    //   .then(data => {
-    //     this.setState({items: data})
-    //     this.pollForUpdates()
-    //   })
-    //   .catch(err => this.setState({error: err}))
   }
 
   componentWillUnmount() {
+    this.unmount = true;
     if (this.timer) {
       clearTimeout(this.timer);
     }
@@ -34,6 +31,10 @@ export default class WorkbenchList extends React.Component {
   pollForUpdates() {
     if (this.timer) {
       clearTimeout(this.timer);
+    }
+
+    if (this.unmount) {
+      return
     }
 
     this.svc.listWorkbenches()
@@ -47,12 +48,22 @@ export default class WorkbenchList extends React.Component {
   }
 
   async startWorkbench(item) {
-    await this.svc.startWorkbench(item);
+    try {
+      await this.svc.startWorkbench(item);
+    } catch (ex) {
+      alert(ex)
+    }
+
     this.pollForUpdates();
   }
 
   async stopWorkbench(item) {
-    await this.svc.stopWorkbench(item);
+    try {
+      await this.svc.stopWorkbench(item);
+    } catch (ex) {
+      alert(ex)
+    }
+
     this.pollForUpdates();
   }
 
@@ -72,10 +83,15 @@ export default class WorkbenchList extends React.Component {
                         <a href={`${item.public_endpoint}#/home/project`} target="_blank" rel="noopener noreferrer">
                           {item.workbench_id}
                         </a>
+                        <div className="subTitle">{item.instance_id}</div>
                       </td>
                       <td>
                           {item.workbench_name}
                           <div style={{fontSize: "0.5em"}}>{item.user_id}</div>
+                      </td>
+                      <td>
+                        CPU: <input type="text" size={6} defaultValue={item.requested_cpu} disabled /><br/>
+                        RAM: <input type="text" size={6} defaultValue={item.requested_memory} disabled /> <br/>
                       </td>
                       <td>{this.renderStatus(item)}</td>
                       <td>{this.renderActions(item)}</td>
@@ -90,6 +106,7 @@ export default class WorkbenchList extends React.Component {
               <tr>
                   <th>ID</th>
                   <th>Name</th>
+                  <th>Resource</th>
                   <th>Status</th>
                   <th></th>
               </tr>
@@ -102,8 +119,10 @@ export default class WorkbenchList extends React.Component {
   renderStatus(item) {
       if (item.status === 'running') {
           return <span className="badge badge-primary">{item.status}</span>
-      } else {
+      } else if (item.status === 'stopped') {
           return <span className="badge badge-secondary">{item.status}</span>
+      } else {
+        return <span className="badge badge-warning">{item.status}</span>
       }
   }
 

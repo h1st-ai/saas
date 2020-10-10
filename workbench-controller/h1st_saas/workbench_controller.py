@@ -6,7 +6,7 @@ import requests
 import h1st_saas.config as config
 import h1st_saas.util as util
 from h1st_saas.gateway_controller import GatewayController
-
+from h1st_saas.infra_controller import InfraController
 
 logger = logging.getLogger(__name__)
 
@@ -89,6 +89,7 @@ class WorkbenchController:
             result = self._start(user, wid, {
                 'workbench_name': workbench_name,
             })
+
             task_arn = result['tasks'][0]['taskArn']
             version_arn = result['tasks'][0]['taskDefinitionArn']
 
@@ -104,6 +105,8 @@ class WorkbenchController:
                     'status': { 'S': 'starting' },
                     'desired_status': { 'S': 'running' },
                     'public_endpoint': { 'S': f'{config.BASE_URL}/{wid}/' },
+                    'requested_memory': { 'N': str(config.WB_DEFAULT_RAM) },
+                    'requested_cpu': { 'N': str(config.WB_DEFAULT_CPU) },
                 }
             )
         except:
@@ -163,6 +166,7 @@ class WorkbenchController:
                     privateAddr = (instances['Reservations'][0]['Instances'][0]['PrivateIpAddress'])
 
                     update['private_endpoint'] = f"http://{privateAddr}:{containerPort}"
+                    update['instance_id'] = instanceId
                 elif ecs_status == 'stopped':
                     # TODO: something is wrong here
                     logger.warn(f'Status is out of sync for workbench {wid}. Removing container info')
@@ -174,6 +178,7 @@ class WorkbenchController:
                 update = {
                     'status': 'stopped',
                     'task_arn': None,
+                    'instance_id': None,
                     'private_endpoint': None,
                 }
         else:
@@ -243,6 +248,7 @@ class WorkbenchController:
 
         self._update_item(user, wid, {
             'task_arn': None,
+            'instance_id': None,
             'private_endpoint': None,
             'status': 'stopped',  # TODO: add "stopping" status
             'desired_status': 'stopped',
@@ -294,16 +300,29 @@ class WorkbenchController:
             f"set -ex && mkdir -p /efs/data/ws-{wid} && rm -rf {wb_path} && ln -s /efs/data/ws-{wid} {wb_path} && " + config.WB_BOOT_COMMAND,
         ]
 
+        memory = item.get('requested_memory', config.WB_DEFAULT_RAM)
+        cpu = item.get('requested_cpu', config.WB_DEFAULT_CPU)
+
+        provider, instance_type = InfraController().determine_provider(cpu, memory)
+
+        logger.info(f"Use provider {provider}, instance type {instance_type} for workbench {wid}")
+
+        capacityProviderStrategy = [{
+            'capacityProvider': provider
+        }]
+
         result = ecs.run_task(
+            capacityProviderStrategy=capacityProviderStrategy,
             cluster=config.ECS_CLUSTER,
             taskDefinition=config.ECS_TASK_DEFINITION,
+            startedBy=f"h1st/{user}/{wid}",
             overrides={
                 'containerOverrides': [
                     {
                         'name': 'workbench',
                         'environment': envvar,
-                        'cpu': config.WB_DEFAULT_CPU,
-                        'memory': config.WB_DEFAULT_RAM,
+                        'cpu': cpu,
+                        'memory': memory,
                         "command": ws_cmd,
                     }
                 ]
@@ -314,6 +333,10 @@ class WorkbenchController:
                 {'key': 'User ID', 'value': user},
             ]
         )
+
+        if len(result.get('failures')):
+            reason = result['failures'][0]['reason']
+            raise RuntimeError(f'Unable to launch task: {reason}')
 
         return result
 
@@ -346,9 +369,14 @@ class WorkbenchController:
             if v is None:
                 updates[k] = {'Action': 'DELETE'}
             else:
+                if type(v) == int or type(v) == float:
+                    v = {'N': v}
+                else:
+                    v = {'S': str(v)}
+
                 updates[k] = {
                     'Action': 'PUT',
-                    'Value': {'S': str(v)},
+                    'Value': v,
                 }
 
         dyn = boto3.client('dynamodb')
@@ -366,6 +394,12 @@ class WorkbenchController:
             x = list(i[k].keys())[0]
             v[k] = i[k][x]
 
+            if x == 'N':
+                if '.' in v[k]:
+                    v[k] = float(v[k])
+                else:
+                    v[k] = int(v[k])
+
         return v
 
     def _verify_endpoint(self, wid, item, update):
@@ -379,7 +413,7 @@ class WorkbenchController:
                 else:
                     # also verify public endpoint
                     if 'public_endpoint' in item:
-                        check = requests.get(item['public_endpoint'], timeout=0.5)
+                        check = requests.get(item['public_endpoint'], timeout=0.5, allow_redirects=False)
                         if check.status_code >= 400:
                             logger.warn(f"Workbench {wid} container status is running but public endpoint return {check.status_code}")
                             update = {'status': 'pending'}
@@ -393,7 +427,7 @@ class WorkbenchController:
 
         if 'public' in config.WB_VERIFY_ENDPOINT and 'public_endpoint' in item:
             try:
-                check = requests.get(item['public_endpoint'], timeout=0.5)
+                check = requests.get(item['public_endpoint'], timeout=0.5, allow_redirects=False)
                 if check.status_code >= 400:
                     logger.warn(f"Workbench {wid} container status is running but endpoint return {check.status_code}")
                     update = {'status': 'pending'}
