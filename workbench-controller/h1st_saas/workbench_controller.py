@@ -67,7 +67,7 @@ class WorkbenchController:
 
         return result
 
-    def launch(self, user, workbench_name=""):
+    def launch(self, user, data):
         wid = util.random_char()  # TODO: conflict
         dyn = boto3.client('dynamodb')
         ecs = boto3.client('ecs')
@@ -78,17 +78,21 @@ class WorkbenchController:
 
         user = str(user)
 
+        workbench_name = data.get('workbench_name', '')
+        requested_memory = data.get('requested_memory', config.WB_DEFAULT_RAM)
+        requested_cpu = data.get('requested_cpu', config.WB_DEFAULT_CPU)
+        requested_gpu = data.get('requested_gpu', 0)
+
         if not workbench_name:
             workbench_name = "wb-" + wid
+            data['workbench_name'] = workbench_name
         else:
             workbench_name = str(workbench_name)
 
         task_arn = None
 
         try:
-            result = self._start(user, wid, {
-                'workbench_name': workbench_name,
-            })
+            result = self._start(user, wid, data)
 
             task_arn = result['tasks'][0]['taskArn']
             version_arn = result['tasks'][0]['taskDefinitionArn']
@@ -105,8 +109,9 @@ class WorkbenchController:
                     'status': { 'S': 'starting' },
                     'desired_status': { 'S': 'running' },
                     'public_endpoint': { 'S': f'{config.BASE_URL}/{wid}/' },
-                    'requested_memory': { 'N': str(config.WB_DEFAULT_RAM) },
-                    'requested_cpu': { 'N': str(config.WB_DEFAULT_CPU) },
+                    'requested_memory': { 'N': str(requested_memory) },
+                    'requested_cpu': { 'N': str(requested_cpu) },
+                    'requested_gpu': { 'N': str(requested_gpu) },
                 }
             )
         except:
@@ -311,8 +316,16 @@ class WorkbenchController:
             'capacityProvider': provider
         }]
 
+        # TODO: use placement contraints for allocated instance
+        # see https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task-placement-constraints.html
+        placementConstraints = {}
+
+        kwargs = dict(capacityProviderStrategy=capacityProviderStrategy)
+
+        if placementConstraints:
+            kwargs['placementConstraints'] = placementConstraints
+
         result = ecs.run_task(
-            capacityProviderStrategy=capacityProviderStrategy,
             cluster=config.ECS_CLUSTER,
             taskDefinition=config.ECS_TASK_DEFINITION,
             startedBy=f"h1st/{user}/{wid}",
@@ -331,7 +344,8 @@ class WorkbenchController:
                 {'key': 'Project', 'value': 'H1st'},
                 {'key': 'Workbench ID', 'value': wid},
                 {'key': 'User ID', 'value': user},
-            ]
+            ],
+            **kwargs,
         )
 
         if len(result.get('failures')):

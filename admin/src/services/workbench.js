@@ -45,4 +45,18 @@ export default class WorkbenchService {
     });
     return (await resp.json())
   }
+
+  async startInstance(iid) {
+    const resp = await fetch(this.baseUrl + `/instances/${iid}/start`, {
+      method: 'POST'
+    });
+    return (await resp.json())
+  }
+
+  async stopInstance(iid) {
+    const resp = await fetch(this.baseUrl + `/instances/${iid}/stop`, {
+      method: 'POST'
+    });
+    return (await resp.json())
+  }
 }

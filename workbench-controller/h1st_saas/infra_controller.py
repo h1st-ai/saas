@@ -119,6 +119,20 @@ class InfraController:
 
         return result
 
+    def start_instance(self, instance_id):
+        # TODO: make sure this is managed by us
+        ec2 = boto3.client('ec2')
+        ec2.start_instances(
+            InstanceIds=[instance_id]
+        )
+
+    def stop_instance(self, instance_id):
+        # TODO: make sure this is managed by us
+        ec2 = boto3.client('ec2')
+        ec2.stop_instances(
+            InstanceIds=[instance_id]
+        )
+
     def drain_instance(self, instance_id):
         # mark as drain in ecs
         ecs = boto3.client('ecs')

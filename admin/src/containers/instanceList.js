@@ -46,6 +46,18 @@ export default class InstanceList extends React.Component {
     this.pollForUpdates()
   }
 
+  async startInstance(item) {
+    await this.svc.startInstance(item.id)
+
+    this.pollForUpdates()
+  }
+
+  async stopInstance(item) {
+    await this.svc.stopInstance(item.id)
+
+    this.pollForUpdates()
+  }
+
   render() {
       const items = this.state.items.map(
           item => {
@@ -89,16 +101,36 @@ export default class InstanceList extends React.Component {
   }
 
   renderStatus(item) {
-      if (item.status === 'ACTIVE') {
-          return <span className="badge badge-primary">{item.status}</span>
-      } else {
-          return <span className="badge badge-secondary">{item.status}</span>
-      }
+    if (item.status === 'ACTIVE' && item.agentConnected) {
+      return <span className="badge badge-primary">{item.status}</span>
+    } else if (!item.agentConnected) {
+      return <span className="badge badge-secondary">STOPPED</span>
+    } else {
+      return <span className="badge badge-secondary">{item.status}</span>
+    }
   }
 
   renderActions(item) {
-      return [
-        <button key="drain" onClick={() => this.drainInstance(item)} className="btn btn-sm btn-outline-danger">Drain</button>
-      ]
+    let buttons = []
+
+    if (!item.capacityProviderName) {
+      if (!item.agentConnected) {
+        buttons.push(
+          <button key="start" onClick={() => this.startInstance(item)} className="btn btn-sm btn-outline-secondary">Start</button>
+        )
+      } else {
+        buttons.push(
+          <button key="stop" onClick={() => this.stopInstance(item)} className="btn btn-sm btn-outline-secondary">Stop</button>
+        )
+      }
+
+      buttons.push(" ")
+    }
+
+    buttons.push(
+      <button key="drain" onClick={() => this.drainInstance(item)} className="btn btn-sm btn-outline-danger">Drain</button>
+    )
+
+    return buttons
   }
 }

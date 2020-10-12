@@ -49,7 +49,7 @@ def workbenches_launch():
 
     try:
         wb = WorkbenchController()
-        wid = wb.launch(uid, data.get('workbench_name', ''))
+        wid = wb.launch(uid, data)
 
         return {
             'success': True,
@@ -185,6 +185,42 @@ def instance_drain(iid):
             'success': False,
             'error': {
                 'message': 'Unable to drain instance',
+                'reason': str(ex)
+            }
+        }, 500
+
+
+@bp.route("/instances/<iid>/start", methods=["POST"])
+@auth_require()
+def instance_start(iid):
+    try:
+        InfraController().start_instance(iid)
+
+        return {"success": True}
+    except Exception as ex:
+        current_app.logger.exception('Unable to start instance')
+        return {
+            'success': False,
+            'error': {
+                'message': 'Unable to start instance',
+                'reason': str(ex)
+            }
+        }, 500
+
+
+@bp.route("/instances/<iid>/stop", methods=["POST"])
+@auth_require()
+def instance_stop(iid):
+    try:
+        InfraController().stop_instance(iid)
+
+        return {"success": True}
+    except Exception as ex:
+        current_app.logger.exception('Unable to stop instance')
+        return {
+            'success': False,
+            'error': {
+                'message': 'Unable to stop instance',
                 'reason': str(ex)
             }
         }, 500

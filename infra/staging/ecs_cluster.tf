@@ -1,3 +1,7 @@
+locals {
+  instance_role = "ecsInstanceRole-h1st" # TODO: do we need different role for staging?
+}
+
 data "aws_ami" "ecs_ami" {
   most_recent = true
   owners      = ["amazon"]
@@ -22,7 +26,7 @@ resource "aws_launch_configuration" "ecs_as_conf" {
   image_id      = data.aws_ami.ecs_ami.id
   instance_type = "c5.2xlarge"
 
-  iam_instance_profile = "ecsInstanceRole-h1st"  # TODO: do we need different role for staging?
+  iam_instance_profile = local.instance_role
   associate_public_ip_address = false
 
   security_groups = [
@@ -50,6 +54,56 @@ resource "aws_launch_configuration" "ecs_as_conf" {
   lifecycle {
     create_before_destroy = true
   }
+}
+
+resource "aws_launch_template" "ecs_as_lt" {
+  name_prefix = "h1st_staging_"
+
+  update_default_version = true
+
+  block_device_mappings {
+    device_name = "/dev/xvda"
+
+    ebs {
+      volume_size = 64
+    }
+  }
+  
+  block_device_mappings {
+    device_name = "/dev/xvdcz"
+
+    ebs {
+      volume_size = 192
+    }
+  }
+
+  # ebs_optimized = true
+  iam_instance_profile { name = local.instance_role }
+  image_id = data.aws_ami.ecs_ami.id
+  instance_type = "c5.2xlarge"
+  key_name = "bao"
+
+  monitoring {
+    enabled = true
+  }
+  
+
+  vpc_security_group_ids = [
+    data.aws_security_group.infra_efs.id,
+    data.aws_security_group.infra_gateway.id,
+    data.aws_security_group.infra_web.id,
+    aws_security_group.gateway_access.id,
+  ]
+
+  # tag_specifications {
+  #   resource_type = "instance"
+
+  #   tags = {
+  #     Name = "test"
+  #   }
+  # }
+
+  user_data = base64encode(data.template_file.worker_init.rendered)
 }
 
 resource "aws_launch_configuration" "ecs_large_as_conf" {
@@ -91,7 +145,12 @@ resource "aws_launch_configuration" "ecs_large_as_conf" {
 resource "aws_autoscaling_group" "ecs" {
   name = "ecs-h1st-staging"
 
-  launch_configuration = aws_launch_configuration.ecs_as_conf.id
+  # launch_configuration = aws_launch_configuration.ecs_as_conf.id
+  launch_template {
+    id      = aws_launch_template.ecs_as_lt.id
+    version = "$Latest"
+  }
+
   termination_policies = ["OldestLaunchConfiguration", "Default"]
   vpc_zone_identifier  = [
     "subnet-05328d842dd3de7b9",  # nat 1a
