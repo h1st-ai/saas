@@ -157,10 +157,12 @@ class WorkbenchController:
                 if ecs_status == 'running' and ecs_desired_status == 'stopped' and ecs_stopped_reason:
                     # TODO: something is wrong here
                     logger.warn(f'Status is out of sync for workbench {wid}: {ecs_stopped_reason}. Removing container info')
-                    update['task_arn'] = None
                     update['status'] = 'stopped'
+                    update['task_arn'] = None
+                    update['private_endpoint'] = None
+                    update['instance_id'] = None
                 # the private endpoint won't change during the lifecycle
-                elif ecs_status == 'running' and ('private_endpoint' not in item or item['status'] == 'pending'):
+                elif ecs_status == 'running' and ('private_endpoint' not in item or item['status'] in ('pending', 'starting')):
                     container = None
 
                     for i in range(len(task['containers'])):
