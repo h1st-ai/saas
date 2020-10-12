@@ -25,21 +25,21 @@ class InfraController:
         capacity = {
             'H1st-staging': [
                 {
-                    'max_cpu': 8000,  # 8192
+                    'max_cpu': 8192,  # 8192
                     'max_ram': 15000, # 15577
                     'instance_type': 'c5.2xlarge',
                     'name': 'h1st-staging',
                 },
                 {
-                    'max_ram': 72000, # 73728
-                    'max_cpu': 140000, # 140770
+                    'max_cpu': 73728, # 73728
+                    'max_ram': 140000, # 140770
                     'instance_type': 'c5.18xlarge',
                     'name': 'h1st-staging-large'
                 },
             ],
             'H1st': [
                 {
-                    'max_cpu': 8000,  # 8192
+                    'max_cpu': 8192,  # 8192
                     'max_ram': 15000, # 15577
                     'instance_type': 'c5.2xlarge',
                     'name': 'h1st',

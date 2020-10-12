@@ -150,9 +150,17 @@ class WorkbenchController:
                 task = tasks[0]
 
                 ecs_status = task['lastStatus'].lower()
+                ecs_desired_status = task['desiredStatus'].lower()
+                ecs_stopped_reason = task.get('stoppedReason')
 
+                # task is lost ?
+                if ecs_status == 'running' and ecs_desired_status == 'stopped' and ecs_stopped_reason:
+                    # TODO: something is wrong here
+                    logger.warn(f'Status is out of sync for workbench {wid}: {ecs_stopped_reason}. Removing container info')
+                    update['task_arn'] = None
+                    update['status'] = 'stopped'
                 # the private endpoint won't change during the lifecycle
-                if ecs_status == 'running' and ('private_endpoint' not in item or item['status'] == 'pending'):
+                elif ecs_status == 'running' and ('private_endpoint' not in item or item['status'] == 'pending'):
                     container = None
 
                     for i in range(len(task['containers'])):
@@ -170,14 +178,14 @@ class WorkbenchController:
                     instances = (ec2.describe_instances(InstanceIds=[instanceId]))
                     privateAddr = (instances['Reservations'][0]['Instances'][0]['PrivateIpAddress'])
 
+                    update['status'] = ecs_status
                     update['private_endpoint'] = f"http://{privateAddr}:{containerPort}"
                     update['instance_id'] = instanceId
                 elif ecs_status == 'stopped':
                     # TODO: something is wrong here
                     logger.warn(f'Status is out of sync for workbench {wid}. Removing container info')
                     update['task_arn'] = None
-
-                update['status'] = ecs_status
+                    update['status'] = ecs_status
             else:
                 logger.warn(f"Found invalid task arn {item['task_arn']} for workbench {wid}")
                 update = {
@@ -312,15 +320,23 @@ class WorkbenchController:
 
         logger.info(f"Use provider {provider}, instance type {instance_type} for workbench {wid}")
 
-        capacityProviderStrategy = [{
-            'capacityProvider': provider
-        }]
+        capacityProviderStrategy = []
+        # capacityProviderStrategy = [{
+        #     'capacityProvider': provider
+        # }]
 
-        # TODO: use placement contraints for allocated instance
+        # use placement contraints for allocated instance
         # see https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task-placement-constraints.html
-        placementConstraints = {}
+        placementConstraints = []
+        # placementConstraints = [{
+        #     'type': 'memberOf',
+        #     'expression': 'attribute:h1st.instance-id == i-01b74dcdde7ce27f0',
+        # }]
 
-        kwargs = dict(capacityProviderStrategy=capacityProviderStrategy)
+        kwargs = {}
+
+        if capacityProviderStrategy:
+            kwargs['capacityProviderStrategy'] = capacityProviderStrategy
 
         if placementConstraints:
             kwargs['placementConstraints'] = placementConstraints
