@@ -119,8 +119,66 @@ class InfraController:
 
         return result
 
+    def launch_instance(self, provider_name):
+        """
+        :returns: instance id
+        """
+        # read from provider name
+        # find the launch template for autoscaling group
+        # launch instance using the template
+        # tag it properly
+        pass
+
+    def terminate_instance(self, instance_id):
+        # terminate the instance
+        # remove it from the ECS cluster
+        pass
+
+    def ensure_instance(self, instance_id):
+        instances = self.list_instances()
+        if instance_id not in instances:
+            raise Exception(f'Unknown instance {instance_id}')
+
+        instance = instances[instance_id]
+        if instance.get('capacityProviderName'):
+            raise Exception(f"This instance is managed by {instance['capacityProviderName']}")
+
+        ec2 = boto3.client('ec2')
+        resp = ec2.describe_instances(InstanceIds=[instance_id]).get('Reservations', [])
+
+        if not len(resp) or not len(resp[0]['Instances']):
+            raise Exception(f'Invalid instance {instance_id}')
+
+        ec2_instance = resp[0]['Instances'][0]
+        ec2_instance_state = ec2_instance.get('State', {}).get('Name')
+        if ec2_instance_state == 'running':
+            if instance['agentConnected']:
+                # this may be redundant, but this makes sure to have right attribute for us
+                boto3.client('ecs').put_attributes(
+                    cluster=config.ECS_CLUSTER,
+                    attributes=[
+                        {
+                            'name': 'h1st.instance-id',
+                            'value': instance_id,
+                            'targetType': 'container-instance',
+                            'targetId': instance['containerInstanceArn'],
+                        }
+                    ]
+                )
+
+                return True
+
+            logger.info(f'Instance {instance_id} is running but agent is not ready yet')
+        elif ec2_instance_state == 'stopped':
+            self.start_instance(instance_id)
+        else:
+            logger.info(f'Instance {instance_id} state is {ec2_instance_state}')
+
+        return False
+
     def start_instance(self, instance_id):
         # TODO: make sure this is managed by us
+        logger.info(f"Starting instance {instance_id}")
         ec2 = boto3.client('ec2')
         ec2.start_instances(
             InstanceIds=[instance_id]

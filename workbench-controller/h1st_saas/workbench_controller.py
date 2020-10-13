@@ -92,6 +92,7 @@ class WorkbenchController:
         task_arn = None
 
         try:
+            # TODO: allow user to launch instance
             result = self._start(user, wid, data)
 
             task_arn = result['tasks'][0]['taskArn']
@@ -136,10 +137,189 @@ class WorkbenchController:
         """
         Refresh the status of a workbench and return the updated instance
         """
+        item = self._get_item(user, wid, True)
+        update = self._refresh(item)
+
+        if update.get('private_endpoint') and update['private_endpoint'] != item.get('private_endpoint'):
+            # TODO: the gateway should be able to pull this by itself
+            self._gw.setup(wid, update['private_endpoint'])
+            update = self._verify_endpoint(wid, item, update)
+
+        if update:
+            # print(update)
+            self._update_item(user, wid, update)
+
+        item.update(update)
+        return item
+
+    def start(self, user, wid):
+        """
+        Start a stopped workbench
+        """
+        item = self._get_item(user, wid, True)
+        task_arn = None
+
+        if 'task_arn' not in item:
+            try:
+                result = self._start(user, wid, item)
+                task_arn = result['tasks'][0]['taskArn']
+                version_arn = result['tasks'][0]['taskDefinitionArn']
+
+                self._update_item(user, wid, {
+                    'task_arn': task_arn,
+                    'version_arn': version_arn,
+                    'status': 'starting',
+                    'desired_status': 'running',
+                    'origin_task_arn': task_arn,
+                    'public_endpoint': f'{config.BASE_URL}/{wid}/',  # this to make sure it picks up latest endpoint config
+                })
+            except:
+                if task_arn is not None:
+                    ecs.stop_task(
+                        cluster=config.ECS_CLUSTER,
+                        task=task_arn,
+                        reason='Launch failure',
+                    )
+
+                raise
+        else:
+            self.refresh(user, wid)
+
+    def stop(self, user, wid):
+        """
+        Stop a workbench
+        """
+        ecs = boto3.client('ecs')
+
+        item = self._get_item(user, wid)
+
+        if 'task_arn' in item:
+            ecs.stop_task(
+                cluster=config.ECS_CLUSTER,
+                task=item['task_arn']['S'],
+                reason='Request by user'
+            )
+
+        self._update_item(user, wid, {
+            'task_arn': None,
+            'instance_id': None,
+            'private_endpoint': None,
+            'status': 'stopped',  # TODO: add "stopping" status
+            'desired_status': 'stopped',
+        })
+
+        self._gw.destroy(wid)
+
+    def destroy(self, user, wid):
+        """
+        Destroy a workbench, all data will be lost
+        """
+        self.stop(user, wid)
+        dyn = boto3.client('dynamodb')
+        dyn.delete_item(
+            TableName=config.DYNDB_TABLE,
+            Key=self._item_key(user, wid)
+        )
+
+    def _start(self, user, wid, item=None):
+        """
+        Start an ECS task
+        """
+        ecs = boto3.client('ecs')
+        infra = InfraController()
+
+        item = item or {}
+
+        wb_path = "/home/project"
+
+        envvar = [
+            {'name': 'WORKBENCH_ID', 'value': str(wid)},
+            {'name': 'WORKSPACE_PATH', 'value': wb_path},
+            {'name': 'H1ST_MODEL_REPO_PATH', 'value': f"{wb_path}/.models"},
+            {'name': 'PYTHONPATH', 'value': wb_path},
+            {'name': 'GA_ID', 'value': config.GA_ID},
+        ]
+
+        # jupyter
+        jupyter_url = f'{config.BASE_URL}/{wid}/jupyter'
+        envvar += [
+            {'name': 'JUPYTER_BASE_URL', 'value': jupyter_url},
+            {'name': 'JUPYTER_APP_URL', 'value': jupyter_url},
+            {'name': 'JUPYTER_WS_URL', 'value': jupyter_url.replace("https://", "wss://")},
+            {'name': 'JUPYTER_TOKEN', 'value': 'abc'},
+        ]
+
+        if 'workbench_name' in item:
+            envvar.append({'name': 'WORKBENCH_NAME', 'value': str(item['workbench_name'])})
+
+        # override the command of the container to create symlink before starting the container
+        ws_cmd = [
+            "bash", "-c",
+            f"set -ex && mkdir -p /efs/data/ws-{wid} && rm -rf {wb_path} && ln -s /efs/data/ws-{wid} {wb_path} && " + config.WB_BOOT_COMMAND,
+        ]
+
+        capacityProviderStrategy = []
+        placementConstraints = []
+
+        memory = item.get('requested_memory', config.WB_DEFAULT_RAM)
+        cpu = item.get('requested_cpu', config.WB_DEFAULT_CPU)
+
+        if item.get('allocated_instance_id'):
+            # use placement contraints for allocated instance
+            # see https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task-placement-constraints.html
+            placementConstraints = [{
+                'type': 'memberOf',
+                'expression': 'attribute:h1st.instance-id == ' + item['allocated_instance_id'],
+            }]
+        else:
+            provider, instance_type = InfraController().determine_provider(cpu, memory)
+            capacityProviderStrategy = [{
+                'capacityProvider': provider
+            }]
+
+            logger.info(f"Use provider {provider}, instance type {instance_type} for workbench {wid}")
+
+        kwargs = {}
+
+        if capacityProviderStrategy:
+            kwargs['capacityProviderStrategy'] = capacityProviderStrategy
+
+        if placementConstraints:
+            kwargs['placementConstraints'] = placementConstraints
+
+        result = ecs.run_task(
+            cluster=config.ECS_CLUSTER,
+            taskDefinition=config.ECS_TASK_DEFINITION,
+            startedBy=f"h1st/{user}/{wid}",
+            overrides={
+                'containerOverrides': [
+                    {
+                        'name': 'workbench',
+                        'environment': envvar,
+                        'cpu': cpu,
+                        'memory': memory,
+                        "command": ws_cmd,
+                    }
+                ]
+            },
+            tags=[
+                {'key': 'Project', 'value': 'H1st'},
+                {'key': 'Workbench ID', 'value': wid},
+                {'key': 'User ID', 'value': user},
+            ],
+            **kwargs,
+        )
+
+        if len(result.get('failures')):
+            reason = result['failures'][0]['reason']
+            raise RuntimeError(f'Unable to launch task: {reason}')
+
+        return result
+
+    def _refresh(self, item):
         ecs = boto3.client('ecs')
         ec2 = boto3.client('ec2')
-
-        item = self._get_item(user, wid, True)
+        wid = item['workbench_id']
 
         update = {}
         
@@ -199,178 +379,7 @@ class WorkbenchController:
         else:
             update = {'status': 'stopped'}
 
-        if 'private_endpoint' in update and update['private_endpoint'] != item.get('private_endpoint'):
-            # TODO: the gateway should be able to pull this by itself
-            self._gw.setup(wid, update['private_endpoint'])
-
-            update = self._verify_endpoint(wid, item, update)
-
-        if update:
-            # print(update)
-            self._update_item(user, wid, update)
-
-        item.update(update)
-        return item
-
-    def start(self, user, wid):
-        """
-        Start a stopped workbench
-        """
-        item = self._get_item(user, wid, True)
-        task_arn = None
-
-        if 'task_arn' not in item:
-            try:
-                result = self._start(user, wid, item)
-                task_arn = result['tasks'][0]['taskArn']
-                version_arn = result['tasks'][0]['taskDefinitionArn']
-
-                self._update_item(user, wid, {
-                    'task_arn': task_arn,
-                    'version_arn': version_arn,
-                    'status': 'starting',
-                    'desired_status': 'running',
-                    'origin_task_arn': task_arn,
-                    'public_endpoint': f'{config.BASE_URL}/{wid}/',  # this to make sure it picks up latest endpoint config
-                })
-            except:
-                if task_arn is not None:
-                    ecs.stop_task(
-                        cluster=config.ECS_CLUSTER,
-                        task=task_arn,
-                        reason='Launch failure',
-                    )
-
-                raise
-        else:
-            # TODO: make sure the container is running
-            self.refresh(user, wid)
-
-    def stop(self, user, wid):
-        """
-        Stop a workbench
-        """
-        ecs = boto3.client('ecs')
-
-        item = self._get_item(user, wid)
-
-        if 'task_arn' in item:
-            ecs.stop_task(
-                cluster=config.ECS_CLUSTER,
-                task=item['task_arn']['S'],
-                reason='Request by user'
-            )
-
-        self._update_item(user, wid, {
-            'task_arn': None,
-            'instance_id': None,
-            'private_endpoint': None,
-            'status': 'stopped',  # TODO: add "stopping" status
-            'desired_status': 'stopped',
-        })
-
-        self._gw.destroy(wid)
-
-    def destroy(self, user, wid):
-        """
-        Destroy a workbench, all data will be lost
-        """
-        self.stop(user, wid)
-        dyn = boto3.client('dynamodb')
-        dyn.delete_item(
-            TableName=config.DYNDB_TABLE,
-            Key=self._item_key(user, wid)
-        )
-
-    def _start(self, user, wid, item=None):
-        ecs = boto3.client('ecs')
-        item = item or {}
-
-        wb_path = "/home/project"
-
-        # TODO: save on s3
-        envvar = [
-            {'name': 'WORKBENCH_ID', 'value': str(wid)},
-            {'name': 'WORKSPACE_PATH', 'value': wb_path},
-            {'name': 'H1ST_MODEL_REPO_PATH', 'value': f"{wb_path}/.models"},
-            {'name': 'PYTHONPATH', 'value': wb_path},
-            {'name': 'GA_ID', 'value': config.GA_ID},
-        ]
-
-        # jupyter
-        jupyter_url = f'{config.BASE_URL}/{wid}/jupyter'
-        envvar += [
-            {'name': 'JUPYTER_BASE_URL', 'value': jupyter_url},
-            {'name': 'JUPYTER_APP_URL', 'value': jupyter_url},
-            {'name': 'JUPYTER_WS_URL', 'value': jupyter_url.replace("https://", "wss://")},
-            {'name': 'JUPYTER_TOKEN', 'value': 'abc'},
-        ]
-
-        if 'workbench_name' in item:
-            envvar.append({'name': 'WORKBENCH_NAME', 'value': str(item['workbench_name'])})
-
-        # override the command of the container
-        ws_cmd = [
-            "bash", "-c",
-            f"set -ex && mkdir -p /efs/data/ws-{wid} && rm -rf {wb_path} && ln -s /efs/data/ws-{wid} {wb_path} && " + config.WB_BOOT_COMMAND,
-        ]
-
-        memory = item.get('requested_memory', config.WB_DEFAULT_RAM)
-        cpu = item.get('requested_cpu', config.WB_DEFAULT_CPU)
-
-        provider, instance_type = InfraController().determine_provider(cpu, memory)
-
-        logger.info(f"Use provider {provider}, instance type {instance_type} for workbench {wid}")
-
-        capacityProviderStrategy = []
-        # capacityProviderStrategy = [{
-        #     'capacityProvider': provider
-        # }]
-
-        # use placement contraints for allocated instance
-        # see https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task-placement-constraints.html
-        placementConstraints = []
-        # placementConstraints = [{
-        #     'type': 'memberOf',
-        #     'expression': 'attribute:h1st.instance-id == i-01b74dcdde7ce27f0',
-        # }]
-
-        kwargs = {}
-
-        if capacityProviderStrategy:
-            kwargs['capacityProviderStrategy'] = capacityProviderStrategy
-
-        if placementConstraints:
-            kwargs['placementConstraints'] = placementConstraints
-
-        result = ecs.run_task(
-            cluster=config.ECS_CLUSTER,
-            taskDefinition=config.ECS_TASK_DEFINITION,
-            startedBy=f"h1st/{user}/{wid}",
-            overrides={
-                'containerOverrides': [
-                    {
-                        'name': 'workbench',
-                        'environment': envvar,
-                        'cpu': cpu,
-                        'memory': memory,
-                        "command": ws_cmd,
-                    }
-                ]
-            },
-            tags=[
-                {'key': 'Project', 'value': 'H1st'},
-                {'key': 'Workbench ID', 'value': wid},
-                {'key': 'User ID', 'value': user},
-            ],
-            **kwargs,
-        )
-
-        if len(result.get('failures')):
-            reason = result['failures'][0]['reason']
-            raise RuntimeError(f'Unable to launch task: {reason}')
-
-        return result
+        return update
 
     def _item_key(self, user, wid):
         return {

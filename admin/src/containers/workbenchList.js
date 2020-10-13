@@ -1,6 +1,6 @@
 import React from 'react';
 import WorkbenchService from '../services/workbench';
-// import { PencilIcon } from '@primer/octicons-react';
+import { CpuIcon } from '@primer/octicons-react';
 
 export default class WorkbenchList extends React.Component {
   constructor(props) {
@@ -83,7 +83,11 @@ export default class WorkbenchList extends React.Component {
                         <a href={`${item.public_endpoint}#/home/project`} target="_blank" rel="noopener noreferrer">
                           {item.workbench_id}
                         </a>
-                        <div className="subTitle">{item.instance_id}</div>
+                        <div className="subTitle">
+                          {item.allocated_instance_id ? <CpuIcon title="Dedicated" size={12} /> : ""}
+                          &nbsp;
+                          {item.instance_id || item.allocated_instance_id}
+                        </div>
                       </td>
                       <td>
                           {item.workbench_name}
