@@ -13,8 +13,9 @@ if __name__ == "__main__":
         try:
             l = len(wc.sync())
             # logger.info(f"Sync {l} items")
-            time.sleep(10)
         except KeyboardInterrupt:
             break
         except:
             logger.exception("Error while syching the workbenches")
+
+        time.sleep(10)

@@ -1,6 +1,6 @@
 import React from 'react';
 import WorkbenchService from '../services/workbench';
-import { CpuIcon } from '@primer/octicons-react';
+import { CpuIcon, SyncIcon } from '@primer/octicons-react';
 
 export default class WorkbenchList extends React.Component {
   constructor(props) {
@@ -13,7 +13,8 @@ export default class WorkbenchList extends React.Component {
 
       this.state = {
           items: [],
-          error: null
+          error: null,
+          refreshingItem: null,
       }
   }
 
@@ -45,6 +46,18 @@ export default class WorkbenchList extends React.Component {
       .catch(err => {
         this.setState({error: err})
       })
+  }
+
+  async refreshWorkbench(item) {
+    this.setState({ refreshingItem: item.workbench_id });
+    try {
+      await this.svc.getWorkbench(item);
+    } catch (ex) {
+      alert(ex)
+    }
+
+    setTimeout(() => this.setState({ refreshingItem: null }), 500)
+    this.pollForUpdates();
   }
 
   async startWorkbench(item) {
@@ -148,6 +161,21 @@ export default class WorkbenchList extends React.Component {
       buttons.push(
         <button key="del" onClick={() => this.deleteWorkbench(item)} className="btn btn-sm btn-outline-danger">Delete</button>
       )
+
+      if (item.status !== "stopped") {
+        let btnClass = ""
+
+        if (this.state.refreshingItem === item.workbench_id) {
+          btnClass += " rotatingAnimation"
+        }
+
+        buttons.push(" ")
+        buttons.push(
+          <button key="refresh" onClick={() => this.refreshWorkbench(item)} className="btn btn-sm btn-outline-secondary">
+            <SyncIcon className={btnClass} />
+          </button>
+        )
+      }
 
       return buttons;
   }

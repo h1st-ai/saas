@@ -9,6 +9,8 @@ import h1st_saas.util as util
 
 logger = logging.getLogger(__name__)
 
+INSTANCE_ID_TAG = "h1st.instance-id"
+
 class InfraController:
     """
     This class provides function to manage the underlying ECS infrastructure
@@ -158,7 +160,7 @@ class InfraController:
                     cluster=config.ECS_CLUSTER,
                     attributes=[
                         {
-                            'name': 'h1st.instance-id',
+                            'name': INSTANCE_ID_TAG,
                             'value': instance_id,
                             'targetType': 'container-instance',
                             'targetId': instance['containerInstanceArn'],
@@ -166,7 +168,7 @@ class InfraController:
                     ]
                 )
 
-                return True
+                return instance
 
             logger.info(f'Instance {instance_id} is running but agent is not ready yet')
         elif ec2_instance_state == 'stopped':

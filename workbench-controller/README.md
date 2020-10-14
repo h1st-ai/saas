@@ -59,7 +59,7 @@ It is also possible to have mix instance types for a single provider and let ECS
 
 ### Dedicated Instance
 
-TBD
+It is possible to assign a dedicated EC2 instance for a workbench. When an instance is assigned, it will be started / stopped together with the workbench.
 
 ## Authentication
 

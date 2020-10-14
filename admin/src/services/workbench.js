@@ -20,6 +20,11 @@ export default class WorkbenchService {
     }
   }
 
+  async getWorkbench(item) {
+    const resp = await fetch(this.baseUrl + `/workbenches/${item.workbench_id}?user_id=${item.user_id}`);
+    return (await resp.json())['item'];
+  }
+
   async stopWorkbench(item) {
     const resp = await fetch(this.baseUrl + `/workbenches/${item.workbench_id}/stop?user_id=${item.user_id}`, {
       method: 'POST'

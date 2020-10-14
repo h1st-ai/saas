@@ -2,11 +2,12 @@ import boto3
 import ulid
 import logging
 import time
+import datetime
 import requests
 import h1st_saas.config as config
 import h1st_saas.util as util
 from h1st_saas.gateway_controller import GatewayController
-from h1st_saas.infra_controller import InfraController
+from h1st_saas.infra_controller import InfraController, INSTANCE_ID_TAG
 
 logger = logging.getLogger(__name__)
 
@@ -16,7 +17,6 @@ class WorkbenchController:
         global logger
 
         logger = logging.getLogger(__name__)
-
         self._gw = GatewayController()
 
     def sync(self):
@@ -159,20 +159,32 @@ class WorkbenchController:
         item = self._get_item(user, wid, True)
         task_arn = None
 
-        if 'task_arn' not in item:
+        if 'task_arn' not in item or not item['task_arn'].startswith('instance:'):
             try:
-                result = self._start(user, wid, item)
-                task_arn = result['tasks'][0]['taskArn']
-                version_arn = result['tasks'][0]['taskDefinitionArn']
+                if item.get('allocated_instance_id'):
+                    # start the instance, refreshing later will start the task
+                    InfraController().ensure_instance(item['allocated_instance_id'])
 
-                self._update_item(user, wid, {
-                    'task_arn': task_arn,
-                    'version_arn': version_arn,
-                    'status': 'starting',
-                    'desired_status': 'running',
-                    'origin_task_arn': task_arn,
-                    'public_endpoint': f'{config.BASE_URL}/{wid}/',  # this to make sure it picks up latest endpoint config
-                })
+                    update = {
+                        'status': 'starting',
+                        'desired_status': 'running',
+                        'task_arn': 'instance:' + item.get('allocated_instance_id'),
+                    }
+                else:
+                    result = self._start(user, wid, item)
+                    task_arn = result['tasks'][0]['taskArn']
+                    version_arn = result['tasks'][0]['taskDefinitionArn']
+
+                    update = {
+                        'task_arn': task_arn,
+                        'version_arn': version_arn,
+                        'status': 'starting',
+                        'desired_status': 'running',
+                        'origin_task_arn': task_arn,
+                    }
+
+                update['public_endpoint'] = f'{config.BASE_URL}/{wid}/'
+                self._update_item(user, wid, update)
             except:
                 if task_arn is not None:
                     ecs.stop_task(
@@ -191,14 +203,19 @@ class WorkbenchController:
         """
         ecs = boto3.client('ecs')
 
-        item = self._get_item(user, wid)
+        item = self._get_item(user, wid, True)
 
         if 'task_arn' in item:
-            ecs.stop_task(
-                cluster=config.ECS_CLUSTER,
-                task=item['task_arn']['S'],
-                reason='Request by user'
-            )
+            if not item['task_arn'].startswith('instance'):
+                ecs.stop_task(
+                    cluster=config.ECS_CLUSTER,
+                    task=item['task_arn'],
+                    reason='Request by user'
+                )
+
+            if item.get('allocated_instance_id'):
+                logger.info(f"Stop instance {item['allocated_instance_id']} for workbench {wid}")
+                InfraController().stop_instance(item['allocated_instance_id'])
 
         self._update_item(user, wid, {
             'task_arn': None,
@@ -269,7 +286,7 @@ class WorkbenchController:
             # see https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task-placement-constraints.html
             placementConstraints = [{
                 'type': 'memberOf',
-                'expression': 'attribute:h1st.instance-id == ' + item['allocated_instance_id'],
+                'expression': f"attribute:{INSTANCE_ID_TAG} == {item['allocated_instance_id']}",
             }]
         else:
             provider, instance_type = InfraController().determine_provider(cpu, memory)
@@ -323,7 +340,7 @@ class WorkbenchController:
 
         update = {}
         
-        if 'task_arn' in item:
+        if item.get('task_arn') and not item['task_arn'].startswith("instance"):
             tasks = ecs.describe_tasks(cluster=config.ECS_CLUSTER, tasks=[item['task_arn']])['tasks']
 
             if tasks:
@@ -376,6 +393,42 @@ class WorkbenchController:
                     'instance_id': None,
                     'private_endpoint': None,
                 }
+        elif item.get('allocated_instance_id') and item['desired_status'] == 'running':
+            # dedicated instance
+            instance = InfraController().ensure_instance(item['allocated_instance_id'])
+            if instance:
+                logger.info(f"Automatically starting workbench {item['workbench_id']} for instance {item['allocated_instance_id']}")
+
+                # use max capacity for workbench, leave some for host
+                item['requested_cpu'] = instance['resources']['CPU']['total']
+                item['requested_memory'] = instance['resources']['MEMORY']['total'] - 256
+
+                # safety measure in case we can't start to avoid the loop
+                try:
+                    result = self._start(item['user_id'], item['workbench_id'], item)
+
+                    task_arn = result['tasks'][0]['taskArn']
+                    version_arn = result['tasks'][0]['taskDefinitionArn']
+
+                    update = {
+                        'task_arn': task_arn,
+                        'version_arn': version_arn,
+                        'status': 'starting',
+                        'origin_task_arn': task_arn,
+                        'requested_cpu': item['requested_cpu'],
+                        'requested_memory': item['requested_memory'],
+                    }
+                except:
+                    logger.exception(f"Unable to start task for workbench {item['workbench_id']}")
+
+                    update = {
+                        'status': 'stopped',
+                        'desired_status': 'stopped'
+                    }
+
+                    InfraController().stop_instance(item['allocated_instance_id'])
+            else:
+                update = {'status': 'starting'}
         else:
             update = {'status': 'stopped'}
 
@@ -411,7 +464,7 @@ class WorkbenchController:
                 updates[k] = {'Action': 'DELETE'}
             else:
                 if type(v) == int or type(v) == float:
-                    v = {'N': v}
+                    v = {'N': str(v)}
                 else:
                     v = {'S': str(v)}
 
