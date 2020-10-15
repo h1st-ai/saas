@@ -197,6 +197,17 @@ class WorkbenchController:
         else:
             self.refresh(user, wid)
 
+    def assign_instance(self, user, wid, instance_id):
+        # TODO: make sure instance id is unique
+
+        item = self.refresh(user, wid)
+        if item['status'] != 'stopped':
+            raise Exception('Workbench must be stopped to assign an instance')
+
+        self._update_item(user, wid, {
+            'allocated_instance_id': instance_id,
+        })
+
     def stop(self, user, wid):
         """
         Stop a workbench
@@ -398,6 +409,7 @@ class WorkbenchController:
                 }
         elif item.get('allocated_instance_id') and item['desired_status'] == 'running':
             # dedicated instance
+            # TODO: how to avoid two instances are assigned to same instance?
             instance = InfraController().ensure_instance(item['allocated_instance_id'])
             if instance:
                 logger.info(f"Automatically starting workbench {item['workbench_id']} for instance {item['allocated_instance_id']}")
@@ -405,6 +417,11 @@ class WorkbenchController:
                 # use max capacity for workbench, leave some for host
                 item['requested_cpu'] = instance['resources']['CPU']['total']
                 item['requested_memory'] = instance['resources']['MEMORY']['total'] - 256
+
+                if 'GPU' in instance['resources']:
+                    item['requested_gpu'] = instance['resources']['GPU']['total']
+                else:
+                    item['requested_gpu'] = 0
 
                 # safety measure in case we can't start to avoid the loop
                 try:
@@ -420,6 +437,7 @@ class WorkbenchController:
                         'origin_task_arn': task_arn,
                         'requested_cpu': item['requested_cpu'],
                         'requested_memory': item['requested_memory'],
+                        'requested_gpu': item['requested_gpu'],
                     }
                 except:
                     logger.exception(f"Unable to start task for workbench {item['workbench_id']}")
@@ -433,7 +451,10 @@ class WorkbenchController:
             else:
                 update = {'status': 'starting'}
         else:
-            update = {'status': 'stopped'}
+            update = {
+                'status': 'stopped',
+                'task_arn': None,
+            }
 
         return update
 
