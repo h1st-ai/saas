@@ -280,6 +280,7 @@ class WorkbenchController:
 
         memory = item.get('requested_memory', config.WB_DEFAULT_RAM)
         cpu = item.get('requested_cpu', config.WB_DEFAULT_CPU)
+        gpus = item.get('requested_gpu', 0)
 
         if item.get('allocated_instance_id'):
             # use placement contraints for allocated instance
@@ -289,10 +290,8 @@ class WorkbenchController:
                 'expression': f"attribute:{INSTANCE_ID_TAG} == {item['allocated_instance_id']}",
             }]
         else:
-            provider, instance_type = InfraController().determine_provider(cpu, memory)
-            capacityProviderStrategy = [{
-                'capacityProvider': provider
-            }]
+            provider, instance_type = InfraController().determine_provider(cpu, memory, gpu)
+            capacityProviderStrategy = [{'capacityProvider': provider}]
 
             logger.info(f"Use provider {provider}, instance type {instance_type} for workbench {wid}")
 
@@ -304,21 +303,25 @@ class WorkbenchController:
         if placementConstraints:
             kwargs['placementConstraints'] = placementConstraints
 
+        containerOverrides = {
+            'name': 'workbench',
+            'environment': envvar,
+            'cpu': cpu,
+            'memory': memory,
+            "command": ws_cmd,
+        }
+
+        if gpus:
+            containerOverrides['resourceRequirements'] = [{
+                'type': 'GPU',
+                'value': str(gpus),
+            }]
+
         result = ecs.run_task(
             cluster=config.ECS_CLUSTER,
             taskDefinition=config.ECS_TASK_DEFINITION,
             startedBy=f"h1st/{user}/{wid}",
-            overrides={
-                'containerOverrides': [
-                    {
-                        'name': 'workbench',
-                        'environment': envvar,
-                        'cpu': cpu,
-                        'memory': memory,
-                        "command": ws_cmd,
-                    }
-                ]
-            },
+            overrides={'containerOverrides': [containerOverrides]},
             tags=[
                 {'key': 'Project', 'value': 'H1st'},
                 {'key': 'Workbench ID', 'value': wid},

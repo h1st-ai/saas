@@ -20,7 +20,7 @@ class InfraController:
     def __init__(self):
         pass
 
-    def determine_provider(self, cpu, ram):
+    def determine_provider(self, cpu, ram, gpu):
         # XXX it's super complicated to automatically determine which provider can
         # provide the request unit, so we make a shortcut and hard code the provider here
 
@@ -29,12 +29,14 @@ class InfraController:
                 {
                     'max_cpu': 8192,  # 8192
                     'max_ram': 15000, # 15577
+                    'max_gpu': 0,  # 0
                     'instance_type': 'c5.2xlarge',
                     'name': 'h1st-staging',
                 },
                 {
                     'max_cpu': 73728, # 73728
                     'max_ram': 140000, # 140770
+                    'max_gpu': 0,  # 0
                     'instance_type': 'c5.18xlarge',
                     'name': 'h1st-staging-large'
                 },
@@ -43,6 +45,7 @@ class InfraController:
                 {
                     'max_cpu': 8192,  # 8192
                     'max_ram': 15000, # 15577
+                    'max_gpu': 0,  # 0
                     'instance_type': 'c5.2xlarge',
                     'name': 'h1st',
                 }
@@ -51,7 +54,7 @@ class InfraController:
 
         providers = capacity[config.ECS_CLUSTER]
         for cap in providers:
-            if cap['max_ram'] >= ram and cap['max_cpu'] >= cpu:
+            if cap['max_ram'] >= ram and cap['max_cpu'] >= cpu and cap['max_gpu'] >= gpu:
                 return cap['name'], cap['instance_type']
 
         raise Exception(f'Unable to satisfy requested resource: cpu: {cpu} ram: {ram}')
@@ -121,20 +124,38 @@ class InfraController:
 
         return result
 
-    def launch_instance(self, provider_name):
+    def launch_instance(self, instance_type, tags, launch_template=None):
         """
         :returns: instance id
         """
-        # read from provider name
+        # read from providers
         # find the launch template for autoscaling group
         # launch instance using the template
+        # make sure to use right subnet and right ami
         # tag it properly
         pass
 
     def terminate_instance(self, instance_id):
-        # terminate the instance
-        # remove it from the ECS cluster
-        pass
+        """
+        Terminate a managed instance. It will terminate the instance then remove from ECS cluster
+        """
+        instances = self.list_instances()
+        if instance_id not in instances:
+            raise Exception(f'Unknown instance {instance_id}')
+
+        instance = instances[instance_id]
+        if instance.get('capacityProviderName'):
+            raise Exception(f"This instance is managed by {instance['capacityProviderName']}")
+
+        ec2 = boto3.client('ec2')
+        ecs = boto3.client('ecs')
+
+        ecs.deregister_container_instance(
+            cluster=config.ECS_CLUSTER,
+            containerInstance=instance['containerInstanceArn']
+        )
+
+        ec2.terminate_instances(InstanceIds=[instance_id])
 
     def ensure_instance(self, instance_id):
         instances = self.list_instances()
@@ -227,11 +248,17 @@ class InfraController:
                 resources['MEMORY'] = {
                     'available': res['integerValue']
                 }
+            elif res['name'] == 'GPU':
+                resources['GPU'] = {
+                    'available': len(res['stringSetValue'])
+                }
 
         for res in instance['registeredResources']:
             if res['name'] == 'CPU':
                 resources['CPU']['total'] = res['integerValue']
             elif res['name'] == 'MEMORY':
                 resources['MEMORY']['total'] = res['integerValue']
+            elif res['name'] == 'GPU':
+                resources['GPU']['total'] = len(res['stringSetValue'])
 
         return resources

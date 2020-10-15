@@ -109,6 +109,7 @@ export default class WorkbenchList extends React.Component {
                       <td>
                         CPU: <input type="text" size={6} defaultValue={item.requested_cpu} disabled /><br/>
                         RAM: <input type="text" size={6} defaultValue={item.requested_memory} disabled /> <br/>
+                        GPU: <input type="text" size={6} defaultValue={item.requested_gpu} disabled /> <br/>
                       </td>
                       <td>{this.renderStatus(item)}</td>
                       <td>{this.renderActions(item)}</td>

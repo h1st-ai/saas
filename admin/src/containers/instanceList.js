@@ -72,10 +72,14 @@ export default class InstanceList extends React.Component {
                         {item.runningTasksCount} / {item.pendingTasksCount}
                       </td>
                       <td>
-                        {item.resources.CPU.available} / {item.resources.CPU.total}
-                      </td>
-                      <td>
-                        {item.resources.MEMORY.available} / {item.resources.MEMORY.total}
+                        <strong>CPU</strong>: {item.resources.CPU.available} / {item.resources.CPU.total}<br/>
+                        <strong>Memory</strong>: {item.resources.MEMORY.available} / {item.resources.MEMORY.total}<br/>
+                        {item.resources.GPU ? 
+                          <div>
+                            <strong>GPU</strong>: {item.resources.GPU.available} / {item.resources.GPU.total}<br/>
+                          </div> :
+                          ""
+                        }
                       </td>
                       <td>{this.renderActions(item)}</td>
                   </tr>
@@ -90,8 +94,7 @@ export default class InstanceList extends React.Component {
                   <th>ID</th>
                   <th>Status</th>
                   <th>Tasks</th>
-                  <th>CPU</th>
-                  <th>Memory</th>
+                  <th>Resource</th>
                   <th></th>
               </tr>
               </thead>
