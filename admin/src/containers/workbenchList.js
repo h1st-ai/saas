@@ -1,4 +1,5 @@
 import React from 'react';
+import PropTypes from 'prop-types';
 import WorkbenchService from '../services/workbench';
 import { CpuIcon, SyncIcon } from '@primer/octicons-react';
 
@@ -6,7 +7,7 @@ export default class WorkbenchList extends React.Component {
   constructor(props) {
       super(props)
 
-      this.svc = new WorkbenchService();
+      this.svc = new WorkbenchService(props.apiUrl);
 
       this.timer = null;
       this.unmount = false;
@@ -16,6 +17,15 @@ export default class WorkbenchList extends React.Component {
           error: null,
           refreshingItem: null,
       }
+  }
+
+  shouldComponentUpdate(nextProps, nextState) {
+    if (nextProps.apiUrl !== this.props.apiUrl) {
+      this.svc = new WorkbenchService(nextProps.apiUrl);
+      this.pollForUpdates()
+    }
+
+    return true
   }
 
   componentDidMount() {
@@ -180,4 +190,8 @@ export default class WorkbenchList extends React.Component {
 
       return buttons;
   }
+}
+
+WorkbenchList.propTypes = {
+  apiUrl: PropTypes.string
 }

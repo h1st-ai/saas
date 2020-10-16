@@ -5,7 +5,7 @@ export default class InstanceList extends React.Component {
   constructor(props) {
       super(props)
 
-      this.svc = new WorkbenchService();
+      this.svc = new WorkbenchService(props.apiUrl);
 
       this.timer = null;
 
@@ -13,6 +13,15 @@ export default class InstanceList extends React.Component {
           items: [],
           error: null
       }
+  }
+
+  shouldComponentUpdate(nextProps, nextState) {
+    if (nextProps.apiUrl !== this.props.apiUrl) {
+      this.svc = new WorkbenchService(nextProps.apiUrl);
+      this.pollForUpdates()
+    }
+
+    return true
   }
 
   componentDidMount() {

@@ -1,7 +1,17 @@
+export const BASE_URLS = {
+  staging: 'http://10.30.128.207:8999',
+  prod: 'http://10.30.0.142:8999',
+  local: 'http://localhost:8999',
+}
+
 export default class WorkbenchService {
-  // baseUrl = "http://10.30.0.142:8999"  // prod
-  baseUrl = "http://10.30.128.207:8999"  // staging
-  // baseUrl = "http://localhost:8999"
+  constructor(baseUrl = "") {
+    if (!baseUrl) {
+      baseUrl = BASE_URLS.prod
+    }
+
+    this.baseUrl = baseUrl
+  }
 
   async listWorkbenches() {
     const resp = await fetch(this.baseUrl + '/workbenches?user_id=');
