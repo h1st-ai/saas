@@ -71,8 +71,10 @@ class WorkbenchController:
         wid = util.random_char()  # TODO: conflict
         dyn = boto3.client('dynamodb')
         ecs = boto3.client('ecs')
+        infra = InfraController()
 
         # TODO: detect when we reach max capacity
+        # TODO: limit max number of dedicated instances
         if config.ECS_MAX_WB:
             pass
 
@@ -82,6 +84,7 @@ class WorkbenchController:
         requested_memory = data.get('requested_memory', config.WB_DEFAULT_RAM)
         requested_cpu = data.get('requested_cpu', config.WB_DEFAULT_CPU)
         requested_gpu = data.get('requested_gpu', 0)
+        instance_type = data.get('allocated_instance_type', '')
 
         if not workbench_name:
             workbench_name = "wb-" + wid
@@ -90,30 +93,45 @@ class WorkbenchController:
             workbench_name = str(workbench_name)
 
         task_arn = None
+        instance_id = None
 
         try:
-            # TODO: allow user to launch instance
-            result = self._start(user, wid, data)
+            if instance_type:
+                logger.info(f'Launch new instance {instance_type} for workbench request')
+                instance_id = infra.launch_instance(instance_type, {
+                    'Workbench ID': wid,
+                    'Workbench Name': workbench_name,
+                })
 
-            task_arn = result['tasks'][0]['taskArn']
-            version_arn = result['tasks'][0]['taskDefinitionArn']
+                task_arn = "instance:" + instance_id
+                version_arn = ""
+            else:
+                result = self._start(user, wid, data)
+                task_arn = result['tasks'][0]['taskArn']
+                version_arn = result['tasks'][0]['taskDefinitionArn']
+
+            item = {
+                'user_id': { 'S': user, },
+                'workbench_id': { 'S': wid, },
+                'workbench_name': { 'S': workbench_name },
+                'task_arn': { 'S': task_arn, },
+                'origin_task_arn': { 'S': task_arn, },
+                'version_arn': { 'S': version_arn },
+                'status': { 'S': 'starting' },
+                'desired_status': { 'S': 'running' },
+                'public_endpoint': { 'S': f'{config.BASE_URL}/{wid}/' },
+                'requested_memory': { 'N': str(requested_memory) },
+                'requested_cpu': { 'N': str(requested_cpu) },
+                'requested_gpu': { 'N': str(requested_gpu) },
+            }
+
+            if instance_id:
+                item['allocated_instance_id'] = {'S': instance_id}
+                item['allocated_instance_type'] = {'S': instance_type}
 
             dyn.put_item(
                 TableName=config.DYNDB_TABLE,
-                Item={
-                    'user_id': { 'S': user, },
-                    'workbench_id': { 'S': wid, },
-                    'workbench_name': { 'S': workbench_name },
-                    'task_arn': { 'S': task_arn, },
-                    'origin_task_arn': { 'S': task_arn, },
-                    'version_arn': { 'S': version_arn },
-                    'status': { 'S': 'starting' },
-                    'desired_status': { 'S': 'running' },
-                    'public_endpoint': { 'S': f'{config.BASE_URL}/{wid}/' },
-                    'requested_memory': { 'N': str(requested_memory) },
-                    'requested_cpu': { 'N': str(requested_cpu) },
-                    'requested_gpu': { 'N': str(requested_gpu) },
-                }
+                Item=item
             )
         except:
             if task_arn is not None:
@@ -122,6 +140,10 @@ class WorkbenchController:
                     task=task_arn,
                     reason='Launch failure',
                 )
+
+            if instance_id is not None:
+                logger.warn('Terminate instance due to error ' + instance_id)
+                infra.terminate_instance(instance_id, True)
 
             raise
 
@@ -242,7 +264,14 @@ class WorkbenchController:
         """
         Destroy a workbench, all data will be lost
         """
+        item = self._get_item(user, wid, True)
         self.stop(user, wid)
+
+        if item.get('allocated_instance_id'):
+            instance_id = item['allocated_instance_id']
+            logger.warn(f'Terminate instance {instance_id} together with workbench {wid}')
+            InfraController().terminate_instance(instance_id, True)
+
         dyn = boto3.client('dynamodb')
         dyn.delete_item(
             TableName=config.DYNDB_TABLE,

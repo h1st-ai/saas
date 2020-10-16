@@ -26,6 +26,7 @@ class InfraController:
         # XXX it's super complicated to automatically determine which provider can
         # provide the request unit, so we make a shortcut and hard code the provider here
 
+        # TODO: check for limit
         capacity = {
             'H1st-staging': [
                 {
@@ -190,12 +191,16 @@ class InfraController:
 
         return resp['Instances'][0]['InstanceId']
 
-    def terminate_instance(self, instance_id):
+    def terminate_instance(self, instance_id, force=False):
         """
         Terminate a managed instance. It will terminate the instance then remove from ECS cluster
         """
         instances = self.list_instances()
         if instance_id not in instances:
+            if force:
+                ec2.terminate_instances(InstanceIds=[instance_id])
+                return
+
             raise Exception(f'Unknown instance {instance_id}')
 
         instance = instances[instance_id]
