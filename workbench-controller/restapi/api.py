@@ -121,6 +121,7 @@ def workbenches_start(wid):
             "success": True,
         }
     except Exception as ex:
+        current_app.logger.exception('Unable to start workbench')
         return {
             'success': False,
             'error': {

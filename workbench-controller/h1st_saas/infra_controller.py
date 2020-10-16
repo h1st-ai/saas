@@ -1,7 +1,9 @@
 import boto3
 import ulid
 import logging
+import random
 import time
+import re
 import requests
 import h1st_saas.config as config
 import h1st_saas.util as util
@@ -60,6 +62,9 @@ class InfraController:
         raise Exception(f'Unable to satisfy requested resource: cpu: {cpu} ram: {ram}')
 
     def list_instances(self):
+        # TODO: this does not list managed instances when it is not ready yet
+        # maybe we should look at instance with right tags (Project + Environment)
+
         ecs = boto3.client('ecs')
         paginator = ecs.get_paginator('list_container_instances')
 
@@ -83,6 +88,10 @@ class InfraController:
                 del instance['remainingResources']
                 del instance['registeredResources']
 
+                # this happens when the instance is stopped
+                if not instance['agentConnected'] and instance['status'] == 'ACTIVE':
+                    instance['status'] = 'STOPPED'
+
                 result[instance['id']] = instance
 
         return result
@@ -90,6 +99,7 @@ class InfraController:
     def list_providers(self):
         # TODO: cache this
         ecs = boto3.client('ecs')
+        ec2 = boto3.client('ec2')
         asg = boto3.client('autoscaling')
 
         resp = ecs.describe_clusters(clusters=[config.ECS_CLUSTER])
@@ -106,15 +116,27 @@ class InfraController:
                     AutoScalingGroupNames=[asgArn.split('/')[-1]]
                 )['AutoScalingGroups'][0]
 
-                launch_config = asg.describe_launch_configurations(
-                    LaunchConfigurationNames=[group['LaunchConfigurationName']]
-                )['LaunchConfigurations'][0]
+                if 'LaunchConfigurationName' in group:
+                    launch_config = asg.describe_launch_configurations(
+                        LaunchConfigurationNames=[group['LaunchConfigurationName']]
+                    )['LaunchConfigurations'][0]
+
+                    instance_type = launch_config['InstanceType']
+                else:
+                    launch_template_versions = ec2.describe_launch_template_versions(
+                        LaunchTemplateName=group['LaunchTemplate']['LaunchTemplateName'],
+                        Versions=['$Default']
+                    )['LaunchTemplateVersions']
+
+                    instance_type = launch_template_versions[0]['LaunchTemplateData']['InstanceType']
 
                 result[provider['name']] = {
                     'name': provider['name'],
                     'auto_scaling_group': {
                         'name': group['AutoScalingGroupName'],
-                        'instance_type': launch_config['InstanceType'],
+                        'launch_template_name': group.get('LaunchTemplate', {}).get('LaunchTemplateName'),
+                        'vpc_subnet_ids': group['VPCZoneIdentifier'].split(','),
+                        'instance_type': instance_type,
                         'desired_size': group['DesiredCapacity'],
                         'min_size': group['MinSize'],
                         'max_size': group['MaxSize'],
@@ -124,16 +146,49 @@ class InfraController:
 
         return result
 
-    def launch_instance(self, instance_type, tags, launch_template=None):
+    def launch_instance(self, instance_type, tags: dict = None):
         """
         :returns: instance id
         """
-        # read from providers
-        # find the launch template for autoscaling group
-        # launch instance using the template
-        # make sure to use right subnet and right ami
-        # tag it properly
-        pass
+        # read from provider and find launch template from autoscaling group
+        providers = self.list_providers()
+        for p in providers.values():
+            if p['auto_scaling_group'].get('launch_template_name'):
+                launch_template = p['auto_scaling_group'].get('launch_template_name')
+                subnet_id = random.choice(p['auto_scaling_group']['vpc_subnet_ids'])
+                break
+        else:
+            raise Exception('Unable to determine launch template')
+
+        kwargs = {}
+
+        # determine right ami for gpu instance types
+        if re.match(r'^(g3|g4|p2|p3)', instance_type):
+            ssm = boto3.client('ssm')
+            kwargs['ImageId'] = ssm.get_parameters(
+                Names=['/aws/service/ecs/optimized-ami/amazon-linux-2/gpu/recommended/image_id']
+            )['Parameters'][0]['Value']
+
+        if tags:
+            tags = tags or {}
+            kwargs['TagSpecifications'] = [{
+                'ResourceType': 'instance',
+                'Tags': [{'Name': str(k), 'Value': str(v)} for k,v in tags.items() if k and v]
+            }]
+
+        ec2 = boto3.client('ec2')
+        resp = ec2.run_instances(
+            **kwargs,
+            InstanceType=instance_type,
+            LaunchTemplate={
+                'LaunchTemplateName': launch_template,
+            },
+            SubnetId=subnet_id,
+            MinCount=1,
+            MaxCount=1,
+        )
+
+        return resp['Instances'][0]['InstanceId']
 
     def terminate_instance(self, instance_id):
         """
@@ -145,6 +200,8 @@ class InfraController:
 
         instance = instances[instance_id]
         if instance.get('capacityProviderName'):
+            # TODO detach from autoscaling group
+            # then we can delete this
             raise Exception(f"This instance is managed by {instance['capacityProviderName']}")
 
         ec2 = boto3.client('ec2')
@@ -194,6 +251,9 @@ class InfraController:
             logger.info(f'Instance {instance_id} is running but agent is not ready yet')
         elif ec2_instance_state == 'stopped':
             self.start_instance(instance_id)
+        elif ec2_instance_state == 'terminated':
+            # Should we also remove it from ECS here?
+            raise Exception(f"Instance {instance_id} is already terminated")
         else:
             logger.info(f'Instance {instance_id} state is {ec2_instance_state}')
 
@@ -230,8 +290,6 @@ class InfraController:
 
         # TODO: 
         # stop all containers
-        # detach from autoscaling group
-        # delete
 
         return False
 

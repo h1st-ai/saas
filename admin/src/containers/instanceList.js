@@ -104,10 +104,8 @@ export default class InstanceList extends React.Component {
   }
 
   renderStatus(item) {
-    if (item.status === 'ACTIVE' && item.agentConnected) {
+    if (item.status === 'ACTIVE') {
       return <span className="badge badge-primary">{item.status}</span>
-    } else if (!item.agentConnected) {
-      return <span className="badge badge-secondary">STOPPED</span>
     } else {
       return <span className="badge badge-secondary">{item.status}</span>
     }

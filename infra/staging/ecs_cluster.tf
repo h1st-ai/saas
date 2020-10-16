@@ -8,7 +8,7 @@ data "aws_ami" "ecs_ami" {
 
   filter {
     name   = "name"
-    values = ["amzn-ami-*-amazon-ecs-optimized"]
+    values = ["amzn2-ami-ecs-hvm-2.0.*-x86_64-ebs"]
   }
 }
 
@@ -17,42 +17,6 @@ data "template_file" "worker_init" {
 
   vars = {
     cluster = var.ecs_cluster
-  }
-}
-
-resource "aws_launch_configuration" "ecs_as_conf" {
-  name_prefix = "h1st_staging_"
-
-  image_id      = data.aws_ami.ecs_ami.id
-  instance_type = "c5.2xlarge"
-
-  iam_instance_profile = local.instance_role
-  associate_public_ip_address = false
-
-  security_groups = [
-    data.aws_security_group.infra_efs.id,
-    data.aws_security_group.infra_gateway.id,
-    data.aws_security_group.infra_web.id,
-    aws_security_group.gateway_access.id,
-    # data.aws_security_group.infra_rds.id,
-  ]
-
-  key_name  = "bao"
-  user_data = data.template_file.worker_init.rendered
-
-  root_block_device {
-    volume_size = 64
-    volume_type = "gp2"
-  }
-
-  ebs_block_device {
-    device_name = "/dev/xvdcz"
-    volume_type = "gp2"
-    volume_size = 192
-  }
-
-  lifecycle {
-    create_before_destroy = true
   }
 }
 
@@ -66,14 +30,6 @@ resource "aws_launch_template" "ecs_as_lt" {
 
     ebs {
       volume_size = 64
-    }
-  }
-  
-  block_device_mappings {
-    device_name = "/dev/xvdcz"
-
-    ebs {
-      volume_size = 192
     }
   }
 
@@ -95,13 +51,15 @@ resource "aws_launch_template" "ecs_as_lt" {
     aws_security_group.gateway_access.id,
   ]
 
-  # tag_specifications {
-  #   resource_type = "instance"
+  tag_specifications {
+    resource_type = "instance"
 
-  #   tags = {
-  #     Name = "test"
-  #   }
-  # }
+    tags = {
+      Project = "H1st"
+      Name = "ecs-h1st-staging"
+      Environment = var.environment_tag
+    }
+  }
 
   user_data = base64encode(data.template_file.worker_init.rendered)
 }
@@ -127,14 +85,8 @@ resource "aws_launch_configuration" "ecs_large_as_conf" {
   user_data = data.template_file.worker_init.rendered
 
   root_block_device {
-    volume_size = 64
+    volume_size = 196
     volume_type = "gp2"
-  }
-
-  ebs_block_device {
-    device_name = "/dev/xvdcz"
-    volume_type = "gp2"
-    volume_size = 192
   }
 
   lifecycle {
@@ -145,7 +97,6 @@ resource "aws_launch_configuration" "ecs_large_as_conf" {
 resource "aws_autoscaling_group" "ecs" {
   name = "ecs-h1st-staging"
 
-  # launch_configuration = aws_launch_configuration.ecs_as_conf.id
   launch_template {
     id      = aws_launch_template.ecs_as_lt.id
     version = "$Latest"

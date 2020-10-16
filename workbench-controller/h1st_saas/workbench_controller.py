@@ -301,7 +301,7 @@ class WorkbenchController:
                 'expression': f"attribute:{INSTANCE_ID_TAG} == {item['allocated_instance_id']}",
             }]
         else:
-            provider, instance_type = InfraController().determine_provider(cpu, memory, gpu)
+            provider, instance_type = InfraController().determine_provider(cpu, memory, gpus)
             capacityProviderStrategy = [{'capacityProvider': provider}]
 
             logger.info(f"Use provider {provider}, instance type {instance_type} for workbench {wid}")
