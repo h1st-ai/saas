@@ -1,10 +1,15 @@
+locals {
+  instance_role = "ecsInstanceRole-h1st" # TODO: do we need different role for staging?
+}
+
+
 data "aws_ami" "ecs_ami" {
   most_recent = true
   owners      = ["amazon"]
 
   filter {
     name   = "name"
-    values = ["amzn-ami-*-amazon-ecs-optimized"]
+    values = ["amzn2-ami-ecs-hvm-2.0.*-x86_64-ebs"]
   }
 }
 
@@ -16,45 +21,56 @@ data "template_file" "worker_init" {
   }
 }
 
-resource "aws_launch_configuration" "ecs_as_conf" {
-  name_prefix = "ecs_as_"
+resource "aws_launch_template" "ecs_as_lt" {
+  name_prefix = "h1st_"
 
-  image_id      = data.aws_ami.ecs_ami.id
+  update_default_version = true
+
+  block_device_mappings {
+    device_name = "/dev/xvda"
+
+    ebs {
+      volume_size = 64
+    }
+  }
+
+  # ebs_optimized = true
+  iam_instance_profile { name = local.instance_role }
+  image_id = data.aws_ami.ecs_ami.id
   instance_type = "c5.2xlarge"
+  key_name = "bao"
 
-  iam_instance_profile = aws_iam_instance_profile.ecs_instance_profile.name
-  associate_public_ip_address = false
+  monitoring {
+    enabled = true
+  }
 
-  security_groups = [
+  vpc_security_group_ids = [
     data.aws_security_group.infra_efs.id,
     data.aws_security_group.infra_gateway.id,
     data.aws_security_group.infra_web.id,
-    data.aws_security_group.infra_rds.id,
+    # data.aws_security_group.infra_rds.id,
   ]
 
-  key_name  = "bao"
-  user_data = data.template_file.worker_init.rendered
+  tag_specifications {
+    resource_type = "instance"
 
-  root_block_device {
-    volume_size = 64
-    volume_type = "gp2"
+    tags = {
+      Project = var.project_tag
+      Name = "ecs-h1st"
+      Environment = var.environment_tag
+    }
   }
 
-  ebs_block_device {
-    device_name = "/dev/xvdcz"
-    volume_type = "gp2"
-    volume_size = 192
-  }
-
-  lifecycle {
-    create_before_destroy = true
-  }
+  user_data = base64encode(data.template_file.worker_init.rendered)
 }
 
 resource "aws_autoscaling_group" "ecs" {
   name = "ecs-h1st"
 
-  launch_configuration = aws_launch_configuration.ecs_as_conf.id
+  launch_template {
+    id      = aws_launch_template.ecs_as_lt.id
+    version = "$Latest"
+  }
   termination_policies = ["OldestLaunchConfiguration", "Default"]
   vpc_zone_identifier  = [
     "subnet-05328d842dd3de7b9",  # nat 1a

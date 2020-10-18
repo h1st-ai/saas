@@ -8,7 +8,7 @@ if [ -f "$DIR/.env" ]; then
 fi
 
 # virtualenv
-if [ -f "$DIR/venv" ]; then
+if [ -e "$DIR/venv" ]; then
     echo "Activating virtualenv ..."
     export PATH=$DIR/venv/bin:$PATH
 fi

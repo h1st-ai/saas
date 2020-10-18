@@ -14,3 +14,11 @@ provider "aws" {
 provider "template" {
   
 }
+
+variable "environment_tag" {
+  default = "PROD"
+}
+
+variable "project_tag" {
+  default = "H1st"
+}

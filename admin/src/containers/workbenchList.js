@@ -22,7 +22,7 @@ export default class WorkbenchList extends React.Component {
   shouldComponentUpdate(nextProps, nextState) {
     if (nextProps.apiUrl !== this.props.apiUrl) {
       this.svc = new WorkbenchService(nextProps.apiUrl);
-      this.pollForUpdates()
+      setTimeout(() => this.pollForUpdates())
     }
 
     return true

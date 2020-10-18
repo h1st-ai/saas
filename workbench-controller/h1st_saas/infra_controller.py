@@ -138,6 +138,7 @@ class InfraController:
                         'launch_template_name': group.get('LaunchTemplate', {}).get('LaunchTemplateName'),
                         'vpc_subnet_ids': group['VPCZoneIdentifier'].split(','),
                         'instance_type': instance_type,
+                        'current_size': len(group['Instances']),
                         'desired_size': group['DesiredCapacity'],
                         'min_size': group['MinSize'],
                         'max_size': group['MaxSize'],
@@ -205,9 +206,21 @@ class InfraController:
 
         instance = instances[instance_id]
         if instance.get('capacityProviderName'):
-            # TODO detach from autoscaling group
-            # then we can delete this
-            raise Exception(f"This instance is managed by {instance['capacityProviderName']}")
+            if instance['status'] != 'DRAINING':
+                raise Exception(f"Instance from provider must be in DRAINING status for termination")
+            elif (instance['runningTasksCount'] + instance['pendingTasksCount']) != 0:
+                raise Exception(f"Instance from provider must haven to tasks for termination")
+
+            provider = self.list_providers()[instance['capacityProviderName']]
+            group = provider['auto_scaling_group']
+            asg = boto3.client('autoscaling')
+            asg.detach_instances(
+                InstanceIds=[instance_id],
+                AutoScalingGroupName=group['name'],
+                ShouldDecrementDesiredCapacity=group['current_size'] - 1 >= group['desired_size']
+            )
+
+            time.sleep(0.5)
 
         ec2 = boto3.client('ec2')
         ecs = boto3.client('ecs')
