@@ -175,7 +175,7 @@ class InfraController:
             tags = tags or {}
             kwargs['TagSpecifications'] = [{
                 'ResourceType': 'instance',
-                'Tags': [{'Name': str(k), 'Value': str(v)} for k,v in tags.items() if k and v]
+                'Tags': [{'Key': str(k), 'Value': str(v)} for k,v in tags.items() if k and v]
             }]
 
         ec2 = boto3.client('ec2')

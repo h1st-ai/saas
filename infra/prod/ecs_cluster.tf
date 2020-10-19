@@ -30,7 +30,7 @@ resource "aws_launch_template" "ecs_as_lt" {
     device_name = "/dev/xvda"
 
     ebs {
-      volume_size = 64
+      volume_size = 256
     }
   }
 

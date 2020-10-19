@@ -428,6 +428,10 @@ class WorkbenchController:
                     logger.warn(f'Status is out of sync for workbench {wid}. Removing container info')
                     update['task_arn'] = None
                     update['status'] = ecs_status
+                elif ecs_desired_status == 'stopped':
+                    logger.warn(f'Workbench {wid} container is stopped. Last status {ecs_status}')
+                    update['task_arn'] = None
+                    update['status'] = 'stopped'
             else:
                 logger.warn(f"Found invalid task arn {item['task_arn']} for workbench {wid}")
                 update = {

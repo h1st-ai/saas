@@ -7,7 +7,7 @@ CLUSTER=${1:-"dev"}
 
 if [[ "$1" == "PROD" ]]; then
     HOST=10.30.0.142
-    TAG=${2:-"0.2.0"}
+    TAG=${2:-"0.3.0"}
 else
     HOST=10.30.128.207
 fi
