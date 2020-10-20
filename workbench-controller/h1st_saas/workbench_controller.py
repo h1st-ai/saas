@@ -533,8 +533,13 @@ class WorkbenchController:
         dyn = boto3.client('dynamodb')
         dyn.update_item(
             TableName=config.DYNDB_TABLE,
-            Key=self._item_key(user, wid), 
-            AttributeUpdates=updates
+            Key=self._item_key(user, wid),
+            AttributeUpdates=updates,
+            Expected={
+                'workbench_id': {
+                    'Value': {'S': wid}
+                }
+            },
         )
 
     def _flatten_item(self, i):
