@@ -11,6 +11,8 @@ If there is a `.env` on the current directory, it will also read from that file.
 
 Default port is `8999`.
 
+[Architecture](https://drive.google.com/file/d/1tylv9gvNS6XMLHGJ_UVT5CS10SZ_U3Yk/view?usp=sharing)
+
 ## Workbench Image
 
 Workbench controller uses image from `394497726199.dkr.ecr.us-west-1.amazonaws.com/h1st/workbench:latest`.
@@ -48,6 +50,16 @@ PUSH=yes ./scripts/build.sh && ./scripts/deploy.sh
 ```
 
 Currently, it is deployed manually on `10.30.0.142`, and the permissions was created manually for user `h1st_saas`.
+
+## Resource Management
+
+The backend relies on ECS to provision the resource for the container. ECS has multiple [providers](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/cluster-capacity-providers.html) for different instance types, and the backend assigns the workbench to the right provider to minimize the cost and maximize the utilization.
+
+It is also possible to have mix instance types for a single provider and let ECS handles all that, we can explore that in the future.
+
+### Dedicated Instance
+
+It is possible to assign a dedicated EC2 instance for a workbench. When an instance is assigned, it will be started / stopped together with the workbench.
 
 ## Authentication
 
@@ -87,6 +99,9 @@ Create new workbenches for a user.
 
 Parameters:
   * `workbench_name`: Use this to pass as an environment variable `WORKBENCH_NAME` to the container
+  * `requested_memory`: How much memory in mb to allocate for the instance
+  * `requested_cpu`: How many cpu unit to allocate for the instance. 1vCPU = 1024 CPU Unit
+  * `requested_gpu`: How many GPU to allocate for the instance (not supported yet)
 
 IMPORTANT: call /workbenches/{wid} after creating/starting workbench until the status is **running**
 
@@ -94,7 +109,9 @@ IMPORTANT: call /workbenches/{wid} after creating/starting workbench until the s
 POST /workbenches?user_id=xyz
 Content-Type: application/json
 {
-  "workbench_name": "AutoCyber"
+  "workbench_name": "AutoCyber",
+  "requested_memory": 2048,
+  "requested_cpu": 1024
 }
 
 Response:

@@ -1,0 +1,9 @@
+@keyframes spin { 100% { transform:rotate(360deg); } }
+
+.subTitle {
+    font-size: 0.5em
+}
+
+.rotatingAnimation {
+    animation:spin 4s linear infinite;
+}

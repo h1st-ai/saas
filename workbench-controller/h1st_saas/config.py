@@ -12,7 +12,7 @@ TRAEFIK_CONF_DIR = os.environ.get(
 TRAEFIK_AUTH_MIDDLEWARE = os.environ.get('TRAEFIK_AUTH_MIDDLEWARE', '')
 
 # no trailing slash
-BASE_URL = os.environ.get('BASE_URL', 'https://cumulus.h1st.ai//project')
+BASE_URL = os.environ.get('BASE_URL', 'https://cumulus.h1st.ai/project')
 WB_BOOT_COMMAND = "exec /app.sh"
 
 WB_DEFAULT_CPU = int(os.environ.get('WB_DEFAULT_CPU', '1024'))
