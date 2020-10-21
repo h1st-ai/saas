@@ -137,7 +137,9 @@ Response
     "user_id": "xyz",
     "status": "running",
     "workbench_id": "abc",
-    "public_endpoint": "https://cloud.h1st.ai/project/xyz"
+    "public_endpoint": "https://cloud.h1st.ai/project/xyz",
+    "requested_cpu": 123,
+    "requested_memory": 123
   }
 }
 ```

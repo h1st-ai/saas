@@ -12,6 +12,11 @@ from h1st_saas.infra_controller import InfraController, INSTANCE_ID_TAG
 logger = logging.getLogger(__name__)
 
 
+class InvalidWorkbenchException(Exception):
+    def __init__(self, wid):
+        super().__init__(f"Workbench {wid} is not valid")
+
+
 class WorkbenchController:
     def __init__(self):
         global logger
@@ -32,16 +37,23 @@ class WorkbenchController:
             for i in page['Items']:
                 r = self._flatten_item(i)
 
-                if r['status'] != 'stopped':
+                if r['status'] == 'stopped':
+                    continue
+
+                try:
                     item = self.refresh(r['user_id'], r['workbench_id'])
                     results.append(item)
+                except InvalidWorkbenchException:
+                    # it has been deleted during sync
+                    logger.warn(f"Workbench {r['workbench_id']} has been deleted during sync, last status: {r['status']}")
+                    continue
 
-                    if item['status'] != r['status']:
-                        logger.info('Workbench %s: %s -> %s' % (
-                            item['workbench_id'],
-                            r['status'],
-                            item['status']
-                        ))
+                if item['status'] != r['status']:
+                    logger.info('Workbench %s: %s -> %s' % (
+                        item['workbench_id'],
+                        r['status'],
+                        item['status']
+                    ))
 
         return results
 
@@ -507,7 +519,7 @@ class WorkbenchController:
             }).get('Item')
 
         if not item:
-            raise RuntimeError("Workbench is not valid")
+            raise InvalidWorkbenchException(wid)
 
         if flatten:
             item = self._flatten_item(item)
