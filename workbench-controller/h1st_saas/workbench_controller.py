@@ -135,6 +135,8 @@ class WorkbenchController:
                 'requested_memory': { 'N': str(requested_memory) },
                 'requested_cpu': { 'N': str(requested_cpu) },
                 'requested_gpu': { 'N': str(requested_gpu) },
+                'created_at': { 'S': str(datetime.datetime.utcnow()) },
+                'started_at': { 'S': str(datetime.datetime.utcnow()) },
             }
 
             if instance_id:
@@ -179,6 +181,9 @@ class WorkbenchController:
             self._gw.setup(wid, update['private_endpoint'])
             update = self._verify_endpoint(wid, item, update)
 
+            if update.get('status') == 'running':
+                update['ready_at'] = str(datetime.datetime.utcnow())
+
         if update:
             # print(update)
             self._update_item(user, wid, update)
@@ -203,6 +208,7 @@ class WorkbenchController:
                         'status': 'starting',
                         'desired_status': 'running',
                         'task_arn': 'instance:' + item.get('allocated_instance_id'),
+                        'started_at': str(datetime.datetime.utcnow()),
                     }
                 else:
                     result = self._start(user, wid, item)
@@ -215,6 +221,7 @@ class WorkbenchController:
                         'status': 'starting',
                         'desired_status': 'running',
                         'origin_task_arn': task_arn,
+                        'started_at': str(datetime.datetime.utcnow()),
                     }
 
                 update['public_endpoint'] = f'{config.BASE_URL}/{wid}/'
@@ -268,6 +275,7 @@ class WorkbenchController:
             'private_endpoint': None,
             'status': 'stopped',  # TODO: add "stopping" status
             'desired_status': 'stopped',
+            'stopped_at': str(datetime.datetime.utcnow()),
         })
 
         self._gw.destroy(wid)

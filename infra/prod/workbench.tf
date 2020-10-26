@@ -10,4 +10,9 @@ resource "aws_ecs_task_definition" "workbench" {
       root_directory = "/"
     }
   }
+
+  volume {
+    name = "local"
+    host_path = "/opt/local"
+  }
 }

@@ -25,6 +25,10 @@
             {
                 "containerPath": "/efs",
                 "sourceVolume": "efs"
+            },
+            {
+                "containerPath": "/local",
+                "sourceVolume": "local"
             }
         ]
     }
