@@ -1,5 +1,10 @@
 ## Workbench Controller
 
+TODO
+ - [ ] Add a traefik section
+ - [ ] Add dynamodb section
+ - [ ] Folder structure
+
 REST API to manage the workbench contaienr instances.
 To start:
 
@@ -12,6 +17,7 @@ If there is a `.env` on the current directory, it will also read from that file.
 Default port is `8999`.
 
 [Architecture](https://drive.google.com/file/d/1tylv9gvNS6XMLHGJ_UVT5CS10SZ_U3Yk/view?usp=sharing)
+
 
 ## Workbench Image
 
@@ -49,7 +55,7 @@ To deploy
 PUSH=yes ./scripts/build.sh && ./scripts/deploy.sh
 ```
 
-Currently, it is deployed manually on `10.30.0.142`, and the permissions was created manually for user `h1st_saas`.
+Currently it is deployed manually on `10.30.0.142` (for PROD) and `10.30.128.207` (for STAGING) under `/opt` folder., and the permissions was created manually for user `h1st_saas`.
 
 ## Resource Management
 
@@ -59,7 +65,7 @@ It is also possible to have mix instance types for a single provider and let ECS
 
 ### Dedicated Instance
 
-It is possible to assign a dedicated EC2 instance for a workbench. When an instance is assigned, it will be started / stopped together with the workbench.
+It is possible to assign a dedicated EC2 instance for a workbench. When an instance is assigned, it will be started / stopped together with the workbench. When the workbench is deleted, it will also terminate the instance.
 
 ## Authentication
 
