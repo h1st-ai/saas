@@ -6,6 +6,12 @@ import shutil
 
 
 class GatewayController:
+    """
+    Generate traefik config file to allow routing from public to private workbench instance
+    
+    See https://doc.traefik.io/traefik/getting-started/configuration-overview/ for configuration information
+    """
+    
     def __init__(self):
         os.makedirs(config.TRAEFIK_CONF_DIR, exist_ok=True)
 
