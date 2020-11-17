@@ -1,13 +1,26 @@
 ## H1st Terraform Infrastructure
 
+The infrastructure is setup using Terraform, there are some components were setup manually. Need to migrate back to terraform later.
+
+Folder structure
+
 ```
-prod: production
+common: shared information for both environment (vpc, subnet, ...)
 staging: dev & test environment
+prod: production environment
 ```
 
 Note:
+ * DNS is hosted under namecheap account. @khoama can access it via 1Password.
  * Keycloak instances are shared for both prod & staging environment
- * There are some components were setup manually. Need to migrate back to terraform later.
+ * Current default SSH key is `bao`. Make sure to change it to the approriate owner later
+
+### ECS Cluster
+
+[ECS Autoscaling / Capacity provider](https://us-west-1.console.aws.amazon.com/ecs/home?region=us-west-1#/clusters/H1st-staging/capacityProviders) is manually configured via the UI.
+
+### EFS 
+
 
 ### Treafik
 
