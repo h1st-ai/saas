@@ -18,6 +18,11 @@ class InvalidWorkbenchException(Exception):
 
 
 class WorkbenchController:
+    """
+    Main class to provision the workbench, it mainly syncs the state of ECS cluster
+    with Dynamodb table to store the workbench status.
+    """
+    
     def __init__(self):
         global logger
 
@@ -108,6 +113,7 @@ class WorkbenchController:
         instance_id = None
 
         try:
+            # launch a new instance for ECS cluster for this workbench if this is requested by user
             if instance_type:
                 logger.info(f'Launch new instance {instance_type} for workbench request')
                 instance_id = infra.launch_instance(instance_type, {
@@ -155,6 +161,7 @@ class WorkbenchController:
                     reason='Launch failure',
                 )
 
+            # if we launch the instance earlier then we terminate it
             if instance_id is not None:
                 logger.warn('Terminate instance due to error ' + instance_id)
                 infra.terminate_instance(instance_id, True)
@@ -350,6 +357,8 @@ class WorkbenchController:
                 'expression': f"attribute:{INSTANCE_ID_TAG} == {item['allocated_instance_id']}",
             }]
         else:
+            # determine if we can launch the workbench givens the required resources
+            # and use capacityProviderStrategy parameter to launch the task
             provider, instance_type = InfraController().determine_provider(cpu, memory, gpus)
             capacityProviderStrategy = [{'capacityProvider': provider}]
 
