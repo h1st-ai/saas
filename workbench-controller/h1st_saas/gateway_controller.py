@@ -17,6 +17,9 @@ class GatewayController:
 
     def setup(self, wid, endpoint):
         cfg_id = "wb-" + wid
+        
+        # this is required to translate the path between the public url and the workbench instance
+        # because the workbench instance works under root (/) while the public url works under /project/xyz
         mw = ['strip_project']
 
         if config.TRAEFIK_AUTH_MIDDLEWARE:
