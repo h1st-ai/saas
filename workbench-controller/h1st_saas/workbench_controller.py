@@ -406,6 +406,10 @@ class WorkbenchController:
         return result
 
     def _refresh(self, item):
+        """
+        Synchronize the status of ECS to Dynamodb
+        and make sure the workbench is running
+        """
         ecs = boto3.client('ecs')
         ec2 = boto3.client('ec2')
         wid = item['workbench_id']
@@ -434,6 +438,7 @@ class WorkbenchController:
                 elif ecs_status == 'running' and ('private_endpoint' not in item or item['status'] in ('pending', 'starting')):
                     container = None
 
+                    # determine the container in the task and query the instance for private address
                     for i in range(len(task['containers'])):
                         if task['containers'][i]['name'] == 'workbench':
                             container = task['containers'][i]
@@ -449,8 +454,8 @@ class WorkbenchController:
                     instances = (ec2.describe_instances(InstanceIds=[instanceId]))
                     privateAddr = (instances['Reservations'][0]['Instances'][0]['PrivateIpAddress'])
 
-                    update['status'] = ecs_status
                     update['private_endpoint'] = f"http://{privateAddr}:{containerPort}"
+                    update['status'] = ecs_status
                     update['instance_id'] = instanceId
                 elif ecs_status == 'stopped':
                     # TODO: something is wrong here
@@ -462,6 +467,7 @@ class WorkbenchController:
                     update['task_arn'] = None
                     update['status'] = 'stopped'
             else:
+                # this could happen due to database goes out of sync due to manually stop the task
                 logger.warn(f"Found invalid task arn {item['task_arn']} for workbench {wid}")
                 update = {
                     'status': 'stopped',
@@ -470,7 +476,7 @@ class WorkbenchController:
                     'private_endpoint': None,
                 }
         elif item.get('allocated_instance_id') and item['desired_status'] == 'running':
-            # dedicated instance
+            # for dedicated instance, make sure the instance is running before launch the task
             # TODO: how to avoid two instances are assigned to same instance?
             instance = InfraController().ensure_instance(item['allocated_instance_id'])
             if instance:
