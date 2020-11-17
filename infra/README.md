@@ -13,7 +13,7 @@ prod: production environment
 Note:
  * DNS is hosted under namecheap account. @khoama can access it via 1Password.
  * Keycloak instances are shared for both prod & staging environment
- * Current default SSH key is `bao`. Make sure to change it to the approriate owner later
+ * Current default SSH key is `bao`, and configured to allow SSH certificate. Make sure to change it to the approriate owner later.
 
 ### ECS Cluster
 
