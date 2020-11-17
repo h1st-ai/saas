@@ -19,6 +19,9 @@ Note:
 
 [ECS Autoscaling / Capacity provider](https://us-west-1.console.aws.amazon.com/ecs/home?region=us-west-1#/clusters/H1st-staging/capacityProviders) is manually configured via the UI.
 
+Currently the ECS Workbench container definition for prod is configure to `v0.2.0` and staging to `latest`. If we want to update the prod image, we need to change the container definition, or use a convention for production.
+
+
 ### EFS 
 
 
