@@ -47,6 +47,9 @@ To update the command, go to `config.py` and edit the `WB_BOOT_COMMAND`.
 
 All the file systems of the workbences are stored under EFS. The EFS is mounted and symlink to current working folder.
 
+Currently, EFS is mounted globally for all workbench because it uses a single ECS task definition. This has an issue that all users will have access to other data. One possible solution is to create 1 task definition per user to allow data isolation per user.
+
+
 ## Deployment
 
 To deploy
