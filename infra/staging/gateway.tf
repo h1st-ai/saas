@@ -1,3 +1,5 @@
+// Provision gateway instance to host traefik and Controller API
+
 resource "aws_security_group" "gateway" {
   name        = "gateway-staging"
   description = "Gateway Staging"
@@ -101,6 +103,7 @@ resource "aws_lb_target_group_attachment" "gateway" {
   target_id        = aws_instance.gateway.id
 }
 
+// allow access via staging.h1st.ai domain
 resource "aws_lb_listener_rule" "gateway" {
   listener_arn = var.lb_https_listener
 

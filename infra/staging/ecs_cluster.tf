@@ -146,6 +146,7 @@ resource "aws_autoscaling_group" "ecs" {
   }
 }
 
+# Note: the capacity provider is manually configured in the UI right now
 resource "aws_autoscaling_group" "ecs_large" {
   name = "ecs-h1st-staging-large"
 
