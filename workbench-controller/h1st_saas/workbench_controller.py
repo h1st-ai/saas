@@ -62,7 +62,11 @@ class WorkbenchController:
 
         return results
 
-    def list_workbench(self, user):
+    def list_workbenches(self, user):
+        """
+        List all workbenches created by a user
+        Provide empty user to get all workbenches
+        """
         dyn = boto3.client('dynamodb')
 
         if user:
@@ -170,11 +174,68 @@ class WorkbenchController:
 
         return wid
 
+    def get_multi(self, workbenches):
+        """
+        Batch get many workbenches at same time
+        Input is a list of dictionary with workbench_id and user_id keys
+        """
+        dyn = boto3.client('dynamodb')
+        workbenches = list(workbenches)
+        result = []
+
+        keys = [
+            {
+                'workbench_id': {'S': r['workbench_id']},
+                'user_id': {'S': r['user_id']},
+            }
+            for r in workbenches
+        ]
+
+        while keys:
+            batch = keys[:50]
+            keys = keys[50:]  # slice the remaining
+
+            reads = dyn.batch_get_item(
+                RequestItems={
+                    config.DYNDB_TABLE: {
+                        'Keys': batch
+                    }
+                }
+            )
+
+            if 'Responses' in reads:
+                for item in reads['Responses'].get(config.DYNDB_TABLE):
+                    result.append(self._flatten_item(item))
+
+            # carry over for next batch
+            if reads['UnprocessedKeys'].get(config.DYNDB_TABLE):
+                keys = reads['UnprocessedKeys'][config.DYNDB_TABLE]['Keys'] + keys
+
+        return result
+
     def get(self, user, wid, refresh=False):
         if refresh:
             return self.refresh(user, wid)
 
         return self._get_item(user, wid, True)
+
+    def get_by_wid(self, wid):
+        dyn = boto3.client('dynamodb')
+        resp = dyn.query(
+            TableName=config.DYNDB_TABLE,
+            IndexName='workbench-index',
+            KeyConditions={
+                'workbench_id': {
+                    'AttributeValueList': [{'S': wid}],
+                    'ComparisonOperator': 'EQ'
+                }
+            }
+        )
+
+        if not resp['Items']:
+            raise InvalidWorkbenchException(wid)
+
+        return self._flatten_item(resp['Items'][0])
 
     def refresh(self, user, wid):
         """

@@ -1,6 +1,7 @@
 from flask import Blueprint, current_app, request, json, make_response
 from werkzeug.exceptions import HTTPException
 from h1st_saas.workbench_controller import WorkbenchController
+from h1st_saas.workbench_access_controller import WorkbenchAccessController
 from h1st_saas.infra_controller import InfraController
 from .auth import auth_require
 
@@ -26,7 +27,7 @@ def get_user_id():
 def workbenches_list():
     return {
         "success": True,
-        "items": WorkbenchController().list_workbench(get_user_id())
+        "items": WorkbenchController().list_workbenches(get_user_id())
     }
 
 
@@ -96,6 +97,7 @@ def workbenches_delete(wid):
 
     try:
         WorkbenchController().destroy(uid, wid)
+        WorkbenchAccessController().cleanup(wid)
 
         return {
             "success": True,
