@@ -55,7 +55,11 @@ Currently, EFS is mounted globally for all workbench because it uses a single EC
 To deploy
 
 ```
+# Staging
 PUSH=yes ./scripts/build.sh && ./scripts/deploy.sh
+
+# Prod -- You need to specify the tag
+PUSH=yes ./scripts/build.sh 0.3.0 && ./scripts/deploy.sh PROD 0.3.0
 ```
 
 Currently it is deployed manually on `10.30.0.142` (for PROD) and `10.30.128.207` (for STAGING) under `/opt` folder., and the permissions was created manually for user `h1st_saas`.
@@ -184,6 +188,44 @@ DELETE /workbenches/{wid}?user_id=xyz
 Response
 {
   "success": true
+}
+```
+
+List workbench shares
+
+```
+GET /workbenches/{wid}/shares?user_id=xyz
+
+{
+  "items": [
+    {
+      "owner_id": "xyz",
+      "user_id": "xxx",
+      "workbench_id": "xxx",
+      "permission": "read-write"
+    }
+  ]
+}
+```
+
+Add or remove shares to workbench. To remove a share of an item, set permission to empty string.
+
+```
+POST /workbenches/{wid}/shares?user_id=xyz
+
+{
+  "items": [
+    {
+      "user_id": "xxx",
+      "workbench_id": "xxx",
+      "permission": "read-write"  # add new share
+    },
+    {
+      "user_id": "xxx",
+      "workbench_id": "xxx",
+      "permission": null  # remove share
+    }
+  ]
 }
 ```
 

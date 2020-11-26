@@ -27,7 +27,7 @@ def get_user_id():
 def workbenches_list():
     return {
         "success": True,
-        "items": WorkbenchController().list_workbenches(get_user_id())
+        "items": WorkbenchAccessController().list_workbenches(get_user_id())
     }
 
 
@@ -153,6 +153,61 @@ def workbenches_stop(wid):
             }
         }, 500
 
+
+@bp.route("/workbenches/<wid>/shares", methods=["GET"])
+@auth_require()
+def workbenches_shares(wid):
+    uid = get_user_id()
+    try:
+        shares = WorkbenchAccessController().list_shares(workbench_id=wid)
+
+        return {
+            "items": shares,
+            "success": True,
+        }
+    except Exception as ex:
+        current_app.logger.exception('Unable to retrieve shares')
+        return {
+            'success': False,
+            'error': {
+                'message': 'Unable to retrieve shares',
+                'reason': str(ex)
+            }
+        }, 500
+
+
+@bp.route("/workbenches/<wid>/shares", methods=["POST"])
+@auth_require()
+def workbenches_add_shares(wid):
+    data = request.get_json()
+    if not data:
+        data = {}
+
+    if not isinstance(data.get('items'), list):
+        return {
+            'success': False,
+            'error': {
+                'message': 'Request body must be JSON object',
+            }
+        }, 400
+
+    uid = get_user_id()
+    try:
+        WorkbenchAccessController().add_shares(data['items'])
+
+        return {
+            "items": WorkbenchAccessController().list_shares(workbench_id=wid),
+            "success": True,
+        }
+    except Exception as ex:
+        current_app.logger.exception('Unable to add share')
+        return {
+            'success': False,
+            'error': {
+                'message': 'Unable to add share',
+                'reason': str(ex)
+            }
+        }, 500
 
 @bp.route("/instances", methods=["GET"])
 @auth_require()

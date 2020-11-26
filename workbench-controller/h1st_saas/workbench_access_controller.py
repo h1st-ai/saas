@@ -36,6 +36,13 @@ class WorkbenchAccessController:
 
         return sorted(wbs, key=lambda x: x.get('created_at', ''))
 
+    def add_shares(self, shares):
+        for s in shares:
+            if not s.get('permission'):
+                self.share(s['workbench_id'], s['user_id'], s.get('permission'))
+            else:
+                self.unshare(s['workbench_id'], s['user_id'])
+
     def list_shares(self, workbench_id=None, user_id=None):
         if not workbench_id and not user_id:
             raise Exception('You have to specify user id or workbench id')
