@@ -1,10 +1,5 @@
 ## Workbench Controller
 
-TODO
- - [ ] Add a traefik section
- - [ ] Add dynamodb section
- - [ ] Folder structure
-
 REST API to manage the workbench contaienr instances.
 To start:
 
@@ -49,6 +44,10 @@ All the file systems of the workbences are stored under EFS. The EFS is mounted 
 
 Currently, EFS is mounted globally for all workbench because it uses a single ECS task definition. This has an issue that all users will have access to other data. One possible solution is to create 1 task definition per user to allow data isolation per user.
 
+
+## Workbench Gateway
+
+Traefik is used to route traffic to internal ECS containers. Basically, it writes a config file to the traefik config folder, and traefik picks up and serves the route correctly. Workbench controller has to be deployed together with Traefik controller as it needs to update the traefik gateway.
 
 ## Deployment
 
@@ -228,6 +227,15 @@ POST /workbenches/{wid}/shares?user_id=xyz
   ]
 }
 ```
+
+## DynamoDB
+
+DynamoDB is used as for the database to keep track of workbenches and its sharing. There are two main tables
+
+  * H1st_saas_workbench
+  * H1st_saas_workbench_sharing
+
+`staging` environment has a `_staging` suffix. Dynamodb is easy to get started and developed, howerver it may be challenging for anyone who is not familar with it. So feel free to replace it with Postgres or any relevant database.
 
 ## References
 
