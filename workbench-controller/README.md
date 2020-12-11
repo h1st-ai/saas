@@ -5,7 +5,7 @@ TODO
  - [ ] Add dynamodb section
  - [ ] Folder structure
 
-REST API to manage the workbench contaienr instances.
+REST API to manage the workbench container instances.
 To start:
 
   * Install all requirements in requirements.txt
