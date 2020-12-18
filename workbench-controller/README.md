@@ -1,6 +1,14 @@
 ## Workbench Controller
 
-REST API to manage the workbench contaienr instances.
+REST API to manage the workbench container instances.
+
+TODO
+ - [ ] Add a traefik section
+ - [ ] Add dynamodb section
+ - [ ] Folder structure
+
+REST API to manage the workbench container instances.
+
 To start:
 
   * Install all requirements in requirements.txt
