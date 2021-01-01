@@ -1,0 +1,13 @@
+http:
+  routers:
+    forward-auth-route: {rule: PathPrefix(`/project/_oauth`), service: forward-auth, middlewares: [forwardAuth]}
+  services:
+    forward-auth:
+      loadBalancer:
+        servers:
+          - {url: 'http://127.0.0.1:4181'}
+  middlewares:
+    forwardAuth:
+      forwardAuth:
+        address: http://127.0.0.1:4181
+        authResponseHeaders: ["X-Forwarded-User"]

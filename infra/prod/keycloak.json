@@ -1,0 +1,26 @@
+[
+    {
+        "name": "keycloak",
+        "image": "394497726199.dkr.ecr.us-west-1.amazonaws.com/h1st/keycloak:latest",
+        "cpu": 2048,
+        "memory": 2048,
+        "environment": [
+            {"name": "DB_DATABASE", "value": "keycloak"},
+            {"name": "DB_USER", "value": "keycloak"},
+            {"name": "DB_PASSWORD", "value": "keycloakrds"},
+            {"name": "DB_VENDOR", "value": "postgres"},
+            {"name": "DB_ADDR", "value": "h1st.ccdsipkhvgfa.us-west-1.rds.amazonaws.com"},
+
+            {"name": "KEYCLOAK_USER", "value": "admin"},
+            {"name": "KEYCLOAK_PASSWORD", "value": "adminkeycloak"},
+            {"name": "KEYCLOAK_FRONTEND_URL", "value": "https://login.h1st.ai/auth"}
+        ],
+        "essential": true,
+        "portMappings": [
+            {
+                "containerPort": 8080,
+                "hostPort": 80
+            }
+        ]
+    }
+]

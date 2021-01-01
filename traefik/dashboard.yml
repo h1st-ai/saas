@@ -1,0 +1,6 @@
+http:
+    routers:
+      __dashboard__:
+        rule: "PathPrefix(`/dashboard`) || PathPrefix(`/api`)"
+        service: api@internal
+  
