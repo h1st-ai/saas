@@ -4,7 +4,9 @@ resource "aws_security_group" "gateway" {
   vpc_id      = data.aws_vpc.vpc.id
 
   tags = {
-    Name = "Gateway Staging"
+    Environment   = var.environment_tag
+    Project       = var.project_tag
+    Name          = "Gateway Staging"
   }
 }
 
@@ -70,8 +72,6 @@ resource "aws_instance" "gateway" {
     Environment   = var.environment_tag
     Project       = var.project_tag
     Name          = "Gateway - ${var.environment_tag}"
-
-    # always-on     = "true"
   }
 }
 
