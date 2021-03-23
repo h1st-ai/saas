@@ -24,14 +24,25 @@ Default port is `8999`.
 
 ## Workbench Image
 
-Workbench controller uses image from `394497726199.dkr.ecr.us-west-1.amazonaws.com/h1st/workbench:latest`.
+Workbench controller uses image stored on ECR.
 
+### AWS Global
 ```
 REPO=394497726199.dkr.ecr.us-west-1.amazonaws.com
 aws ecr get-login-password --region us-west-1 | sudo docker login --username AWS --password-stdin $REPO
 docker build . -t h1st/workbench
 docker tag h1st/workbench:latest $REPO/h1st/workbench:latest
 docker push $REPO/h1st/workbench:latest
+```
+### AWS China
+```
+export AWS_ACCOUNT=$(aws sts get-caller-identity | jq -r '.Account')
+export AWS_DEFAULT_REGION=cn-northwest-1
+export ECR_REPO=${AWS_ACCOUNT}.dkr.ecr.${AWS_DEFAULT_REGION}.amazonaws.com.cn/workbench:latest
+$(aws ecr get-login --no-include-email)
+docker build -t workbench .
+docker tag workbench:latest ${ECR_REPO}
+docker push ${ECR_REPO}
 ```
 
 Current docker file of workbench: https://github.com/h1st-ai/ide
@@ -61,12 +72,17 @@ Traefik is used to route traffic to internal ECS containers. Basically, it write
 
 To deploy
 
+### AWS Global
 ```
 # Staging
 PUSH=yes ./scripts/build.sh && ./scripts/deploy.sh
 
-# Prod -- You need to specify the tag
+# Production -- You need to specify the tag
 PUSH=yes ./scripts/build.sh 0.3.0 && ./scripts/deploy.sh PROD 0.3.0
+```
+### AWS China
+```
+PUSH=yes ./scripts/build_cn.sh && ./scripts/deploy_cn.sh
 ```
 
 Currently it is deployed manually on `10.30.0.142` (for PROD) and `10.30.128.207` (for STAGING) under `/opt` folder., and the permissions was created manually for user `h1st_saas`.
@@ -188,7 +204,7 @@ Response
 }
 ```
 
-Destroy a workbench, this will destroy all data of workbecnh
+Destroy a workbench, this will destroy all data of workbench
 ```
 DELETE /workbenches/{wid}?user_id=xyz
 
