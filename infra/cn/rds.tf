@@ -4,7 +4,11 @@ resource "aws_db_instance" "h1st" {
   storage_type         = "gp2"
   engine               = "postgres"
   instance_class       = "db.t3.large"
-  name                 = "keycloak"
-  username             = "keycloak"
-  password             = "keycloakrds"
+  name                 = "postgres"
+  username             = "postgres"
+  password             = "arimoiscool"
+
+  vpc_security_group_ids = [
+    aws_security_group.infra_rds.id
+  ]
 }

@@ -1,6 +1,6 @@
 [
     {
-        "name": "workbench",
+        "name": "workbench-staging",
         "essential": true,
         "image": "087218466674.dkr.ecr.cn-northwest-1.amazonaws.com/h1st/workbench:latest",
         "cpu": 2048,

@@ -1,5 +1,5 @@
 resource "aws_dynamodb_table" "h1st_saas_workbench_staging" {
-  name           = "H1st_saas_workbench_staging"
+  name           = "h1st_saas_workbench_staging"
   billing_mode   = "PROVISIONED"
   read_capacity  = 3
   write_capacity = 3
@@ -26,10 +26,10 @@ resource "aws_dynamodb_table" "h1st_saas_workbench_staging" {
     type = "S"
   }
 
-  ttl {
-    attribute_name = "TimeToExist"
-    enabled        = false
-  }
+//  ttl {
+//    attribute_name = "TimeToExist"
+//    enabled        = false
+//  }
 
   global_secondary_index {
     name               = "workbench-index"
@@ -74,10 +74,10 @@ resource "aws_dynamodb_table" "h1st_saas_workbench_sharing_staging" {
     type = "S"
   }
 
-  ttl {
-    attribute_name = "TimeToExist"
-    enabled        = false
-  }
+//  ttl {
+//    attribute_name = "TimeToExist"
+//    enabled        = false
+//  }
 
   global_secondary_index {
     name               = "workbench-index"

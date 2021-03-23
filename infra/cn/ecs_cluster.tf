@@ -184,7 +184,11 @@ resource "aws_autoscaling_group" "ecs_large" {
   }
 }
 
-resource "aws_ecs_task_definition" "workbench" {
+resource "aws_ecs_cluster" "h1st-staging" {
+  name = "h1st-staging"
+}
+
+resource "aws_ecs_task_definition" "workbench-staging" {
   family                = "workbench-staging"
   container_definitions = file("./workbench.json")
 

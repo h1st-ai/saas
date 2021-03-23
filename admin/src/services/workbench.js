@@ -1,5 +1,6 @@
 export const BASE_URLS = {
   staging: 'http://10.30.128.207:8999',
+  cn_staging: 'http://52.83.206.28:8999',
   prod: 'http://10.30.0.142:8999',
   local: 'http://localhost:8999',
 }
