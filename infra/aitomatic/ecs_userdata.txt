@@ -1,0 +1,7 @@
+#cloud-boothook
+#!/bin/bash
+
+cloud-init-per once docker_options echo 'OPTIONS="$${OPTIONS} --storage-opt dm.basesize=20G"' >> /etc/sysconfig/docker
+
+echo ECS_CLUSTER=${cluster} >> /etc/ecs/ecs.config
+echo ECS_DISABLE_IMAGE_CLEANUP=true >> /etc/ecs/ecs.config
