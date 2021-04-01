@@ -1,6 +1,6 @@
 terraform {
   backend "s3" {
-    bucket  = "arimo-infrastructure"
+    bucket  = "infrastructure"
     key     = "terraform/h1st/staging.tfstate"
     region  = "cn-northwest-1"
   }
